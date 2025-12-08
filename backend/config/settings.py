@@ -144,7 +144,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-# Configuración opcional de Simple JWT (para que los tokens duren un tiempo razonable)
+# Configuración opcional de Simple JWT (para que los tokens duren un tiempo estimado)
 from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # La sesión dura 1 hora

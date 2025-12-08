@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import MadreViewSet, PartoViewSet, RecienNacidoViewSet
 from .views import exportar_partos_excel
 
-# El router crea las URLs automáticamente (ej: /api/madres/, /api/partos/)
+# El router crea las URLs automáticamente
 router = DefaultRouter()
 router.register(r'madres', MadreViewSet)
 router.register(r'partos', PartoViewSet)
