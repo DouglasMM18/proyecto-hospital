@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page { size: letter portrait; margin: 2cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #0056b3; padding-bottom: 10px; }
+        .title { font-size: 18px; font-weight: bold; color: #0056b3; margin: 0; }
+        .subtitle { font-size: 14px; color: #666; margin-top: 5px; }
+        .stats-box { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #0056b3; color: white; padding: 8px; text-align: left; font-size: 11px; }
+        td { border-bottom: 1px solid #ddd; padding: 8px; font-size: 11px; vertical-align: top; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; font-size: 10px; text-align: right; color: #999; border-top: 1px solid #ddd; padding-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">Hospital Clínico Herminda Martín</div>
+        <div class="subtitle">Reporte Oficial de Gestión URNI - REM</div>
+    </div>
+
+    <div class="stats-box">
+        <strong>Resumen Ejecutivo:</strong> Total Partos: {{ total_partos }} | Cesáreas: {{ total_cesareas }} | Normales: {{ total_normales }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Profesional</th>
+                <th>RUT Madre</th>
+                <th>RN Sexo</th>
+                <th>Peso</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for parto in partos %}
+            <tr>
+                <td>{{ parto.fecha }}</td>
+                <td>{{ parto.tipo_parto }}</td>
+                <td>{{ parto.profesional_acargo }}</td>
+                <td>{{ parto.madre.rut }}</td>
+                <td>
+                    {% for rn in parto.recien_nacidos.all %}
+                        {{ rn.sexo }}<br>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for rn in parto.recien_nacidos.all %}
+                        {{ rn.peso_gramos }} g<br>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="text-align: center;">No hay datos.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">Generado el: {{ fecha_generacion }}</div>
+</body>
+</html>

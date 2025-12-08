@@ -1,9 +1,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import MadreViewSet, PartoViewSet, RecienNacidoViewSet
-from .views import exportar_partos_excel
+from .views import (
+    MadreViewSet, 
+    PartoViewSet, 
+    RecienNacidoViewSet, 
+    reporte_excel_completo,
+    reporte_pdf_rem,
+)
 
-# El router crea las URLs automáticamente
 router = DefaultRouter()
 router.register(r'madres', MadreViewSet)
 router.register(r'partos', PartoViewSet)
@@ -11,5 +15,7 @@ router.register(r'recien-nacidos', RecienNacidoViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('exportar-excel/', exportar_partos_excel, name='exportar_excel'),
+    # --- NUEVOS REPORTES AVANZADOS ---
+    path('reportes/excel/', reporte_excel_completo, name='reporte_excel_avanzado'),
+    path('reportes/pdf/', reporte_pdf_rem, name='reporte_pdf_rem'),
 ]
