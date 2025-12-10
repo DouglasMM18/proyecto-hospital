@@ -1,8 +1,17 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import logoHeader from '../assets/Logo.png';
+
+const rolLabels: { [key: string]: string } = {
+  'ADMINISTRADOR': 'Administrativo',
+  'ENFERMERA': 'Enfermera',
+  'MATRONA': 'Matrona',
+  'SUPERVISOR': 'Especialista',
+  'TI': 'Administrador TI',
+};
 
 export default function Layout() {
-  const { logout } = useAuthStore();
+  const { logout, username, rol } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -11,26 +20,29 @@ export default function Layout() {
     navigate('/login');
   };
 
-  // Determinar módulo actual
   const getModuloActual = () => {
     const path = location.pathname;
-    if (path.includes('matrona')) return 'Matrona';
-    if (path.includes('especialista')) return 'Especialista';
-    if (path.includes('admin-ti')) return 'Administrador TI';
-    return 'Administrativo';
+    if (path.includes('matrona')) return 'Registro Clínico';
+    if (path.includes('especialista')) return 'Informes';
+    if (path.includes('admin-ti')) return 'Gestión TI';
+    return 'Admisión';
   };
 
   return (
     <div style={styles.container}>
       <nav style={styles.nav}>
         <div style={styles.brand}>
-          <span style={styles.brandIcon}>🏥</span>
+          <img src={logoHeader} alt="Logo" style={styles.brandLogo} />
           <div>
             <div style={styles.brandTitle}>HHM - Neonatología</div>
             <div style={styles.brandModule}>{getModuloActual()}</div>
           </div>
         </div>
-        <div style={styles.links}>
+        <div style={styles.userInfo}>
+          <div style={styles.userDetails}>
+            <span style={styles.userName}>{username || 'Usuario'}</span>
+            <span style={styles.userRol}>{rol ? rolLabels[rol] : ''}</span>
+          </div>
           <button onClick={handleLogout} style={styles.logoutBtn}>
             Cerrar Sesión
           </button>
@@ -46,7 +58,7 @@ export default function Layout() {
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f5f7fa',
+    background: 'linear-gradient(135deg, #e0f2f7 0%, #c1d9e7 100%)',
     display: 'flex',
     flexDirection: 'column',
   },
@@ -55,20 +67,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '0.75rem 2rem',
-    backgroundColor: '#1a365d',
+    backgroundColor: '#007bff',
     color: 'white',
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    boxShadow: '0 2px 10px rgba(0, 123, 255, 0.3)',
   },
   brand: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
   },
-  brandIcon: {
-    fontSize: '28px',
+  brandLogo: {
+    height: '40px',
+    width: 'auto',
   },
   brandTitle: {
     fontSize: '16px',
@@ -76,22 +89,35 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   brandModule: {
     fontSize: '12px',
-    opacity: 0.8,
+    opacity: 0.9,
   },
-  links: {
+  userInfo: {
     display: 'flex',
-    gap: '1.5rem',
     alignItems: 'center',
+    gap: '20px',
+  },
+  userDetails: {
+    textAlign: 'right',
+  },
+  userName: {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 600,
+  },
+  userRol: {
+    fontSize: '11px',
+    opacity: 0.9,
   },
   logoutBtn: {
-    backgroundColor: '#dc2626',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     color: 'white',
-    border: 'none',
+    border: '1px solid rgba(255,255,255,0.3)',
     padding: '8px 16px',
-    borderRadius: '6px',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '14px',
     fontFamily: "'Poppins', sans-serif",
+    transition: 'all 0.2s',
   },
   main: {
     flex: 1,

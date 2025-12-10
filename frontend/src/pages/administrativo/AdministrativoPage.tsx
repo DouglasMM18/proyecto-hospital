@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../../api/axios';
 import BuscarPaciente from '../../components/forms/BuscarPaciente';
+import { madresApi } from '../../api/MadresApi';
 import type { Madre } from '../../types/models';
 
 interface FormData {
-  // Identificación
   id: number | null;
   run: string;
   dv: string;
@@ -13,8 +11,9 @@ interface FormData {
   apellidoPaterno: string;
   apellidoMaterno: string;
   fechaNacimiento: string;
+  comuna: string;
+  cesfam: string;
   nacionalidad: string;
-  // Condiciones especiales
   esMigrante: boolean;
   puebloOriginario: boolean;
   puebloOriginarioTipo: string;
@@ -22,22 +21,17 @@ interface FormData {
   transMasculino: boolean;
   discapacidad: boolean;
   discapacidadTipo: string;
-  // Contacto
   direccion: string;
   region: string;
   ciudad: string;
-  comuna: string;
   telefono: string;
   correo: string;
-  // Ingreso
   tipoPaciente: string;
   origenIngreso: string;
-  cesfam: string;
   planParto: string;
   visitaGuiada: string;
-  // Acompañamiento
-  tieneAcompanante: boolean;
-  motivoSinAcompanante: string;
+  acompanamiento: string;
+  motivoNoAcompanamiento: string;
   parentescoAcompanante: string;
   nombreAcompanante: string;
   runAcompanante: string;
@@ -45,43 +39,54 @@ interface FormData {
 
 const initialFormData: FormData = {
   id: null,
-  run: '', dv: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '',
-  fechaNacimiento: '', nacionalidad: '',
-  esMigrante: false, puebloOriginario: false, puebloOriginarioTipo: '',
-  privadaLibertad: false, transMasculino: false, discapacidad: false, discapacidadTipo: '',
-  direccion: '', region: '', ciudad: '', comuna: '', telefono: '', correo: '',
-  tipoPaciente: '', origenIngreso: '', cesfam: '', planParto: '', visitaGuiada: '',
-  tieneAcompanante: true, motivoSinAcompanante: '', parentescoAcompanante: '',
-  nombreAcompanante: '', runAcompanante: '',
+  run: '',
+  dv: '',
+  nombre: '',
+  apellidoPaterno: '',
+  apellidoMaterno: '',
+  fechaNacimiento: '',
+  comuna: '',
+  cesfam: '',
+  nacionalidad: 'Chilena',
+  esMigrante: false,
+  puebloOriginario: false,
+  puebloOriginarioTipo: '',
+  privadaLibertad: false,
+  transMasculino: false,
+  discapacidad: false,
+  discapacidadTipo: '',
+  direccion: '',
+  region: '',
+  ciudad: '',
+  telefono: '',
+  correo: '',
+  tipoPaciente: '',
+  origenIngreso: '',
+  planParto: '',
+  visitaGuiada: '',
+  acompanamiento: '',
+  motivoNoAcompanamiento: '',
+  parentescoAcompanante: '',
+  nombreAcompanante: '',
+  runAcompanante: '',
 };
 
 export default function AdministrativoPage() {
-  const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [activeTab, setActiveTab] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [modoEdicion, setModoEdicion] = useState(false);
-  const navigate = useNavigate();
+  const [madreExistente, setMadreExistente] = useState<Madre | null>(null);
 
   const handlePacienteEncontrado = (madre: Madre | null) => {
     if (madre) {
-      // Separar nombre completo en partes
+      setMadreExistente(madre);
       const nombrePartes = madre.nombre_completo.split(' ');
-      const nombre = nombrePartes[0] || '';
-      const apellidoPaterno = nombrePartes[1] || '';
-      const apellidoMaterno = nombrePartes.slice(2).join(' ') || '';
-
-      // Separar RUT
-      const rutPartes = madre.rut.split('-');
-
       setFormData(prev => ({
         ...prev,
-        id: madre.id,
-        run: rutPartes[0] || '',
-        dv: rutPartes[1] || '',
-        nombre,
-        apellidoPaterno,
-        apellidoMaterno,
+        id: madre.id || null,
+        nombre: nombrePartes[0] || '',
+        apellidoPaterno: nombrePartes[1] || '',
+        apellidoMaterno: nombrePartes.slice(2).join(' ') || '',
         fechaNacimiento: madre.fecha_nacimiento,
         comuna: madre.comuna,
         cesfam: madre.cesfam || '',
@@ -89,38 +94,46 @@ export default function AdministrativoPage() {
         esMigrante: madre.es_migrante,
         puebloOriginario: madre.pueblo_originario,
       }));
-      setModoEdicion(true);
     } else {
-      setFormData(prev => ({ ...initialFormData, run: prev.run, dv: prev.dv }));
-      setModoEdicion(false);
+      setMadreExistente(null);
+      setFormData(prev => ({
+        ...prev,
+        id: null,
+        nombre: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        fechaNacimiento: '',
+        comuna: '',
+        cesfam: '',
+        nacionalidad: 'Chilena',
+        esMigrante: false,
+        puebloOriginario: false,
+      }));
     }
   };
 
-  const handleRutChange = (rut: string, dv: string) => {
-    setFormData(prev => ({ ...prev, run: rut, dv }));
+  const handleRutChange = (run: string, dv: string) => {
+    setFormData(prev => ({ ...prev, run, dv }));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
-  };
-
-  const handleRadioChange = (name: string, value: boolean | string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
 
     try {
-      const payload = {
-        rut: `${formData.run}-${formData.dv}`,
+      const rutCompleto = formData.run && formData.dv ? `${formData.run}-${formData.dv}` : '';
+      
+      const madreData = {
+        rut: rutCompleto,
         nombre_completo: `${formData.nombre} ${formData.apellidoPaterno} ${formData.apellidoMaterno}`.trim(),
         fecha_nacimiento: formData.fechaNacimiento,
         comuna: formData.comuna,
@@ -128,546 +141,325 @@ export default function AdministrativoPage() {
         nacionalidad: formData.nacionalidad,
         es_migrante: formData.esMigrante,
         pueblo_originario: formData.puebloOriginario,
+        direccion: formData.direccion,
+        telefono: formData.telefono,
       };
 
-      if (modoEdicion && formData.id) {
-        await api.put(`/api/madres/${formData.id}/`, payload);
+      if (madreExistente && madreExistente.id) {
+        await madresApi.update(madreExistente.id, madreData);
+        alert('Paciente actualizada correctamente');
       } else {
-        await api.post('/api/madres/', payload);
+        await madresApi.create(madreData);
+        alert('Paciente registrada correctamente');
       }
 
-      navigate('/');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Error al guardar los datos');
+      // Limpiar
+      setFormData(initialFormData);
+      setMadreExistente(null);
+
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { rut?: string[] } } };
+      if (err.response?.data?.rut) {
+        alert('Error: ' + err.response.data.rut[0]);
+      } else {
+        alert('Error al guardar paciente');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const tabs = [
-    { icon: '👤', label: 'Datos Personales' },
-    { icon: '📍', label: 'Contacto y Ubicación' },
-    { icon: '📋', label: 'Datos de Ingreso' },
-  ];
+  const tabs = ['Datos Personales', 'Contacto y Ubicación', 'Datos de Ingreso'];
 
   return (
     <div style={styles.container}>
-      <div style={styles.formContainer}>
-        <h1 style={styles.formTitle}>
-          {modoEdicion ? '📝 Editar Ficha' : '📋 Nuevo Ingreso'} - Datos de la Madre
-        </h1>
+      <div style={styles.content}>
+        <h1 style={styles.title}>📋 Admisión de Pacientes</h1>
 
         <BuscarPaciente
           onPacienteEncontrado={handlePacienteEncontrado}
           onRutChange={handleRutChange}
         />
 
-        {/* Tabs */}
-        <div style={styles.tabs}>
-          {tabs.map((tab, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => setActiveTab(index)}
-              style={{
-                ...styles.tabButton,
-                ...(activeTab === index ? styles.tabButtonActive : {})
-              }}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
+        <div style={styles.formContainer}>
+          {/* Tabs */}
+          <div style={styles.tabs}>
+            {tabs.map((tab, index) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(index)}
+                style={{
+                  ...styles.tabButton,
+                  ...(activeTab === index ? styles.tabButtonActive : {}),
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div style={styles.tabContent}>
+              {/* Tab 0: Datos Personales */}
+              {activeTab === 0 && (
+                <div style={styles.tabPane}>
+                  <div style={styles.formGrid}>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>RUN</label>
+                      <input
+                        type="text"
+                        value={formData.run && formData.dv ? `${formData.run}-${formData.dv}` : ''}
+                        disabled
+                        style={{ ...styles.input, backgroundColor: '#f0f0f0' }}
+                        placeholder="Busque por RUT arriba"
+                      />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Nombre</label>
+                      <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} style={styles.input} required />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Apellido Paterno</label>
+                      <input type="text" name="apellidoPaterno" value={formData.apellidoPaterno} onChange={handleChange} style={styles.input} required />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Apellido Materno</label>
+                      <input type="text" name="apellidoMaterno" value={formData.apellidoMaterno} onChange={handleChange} style={styles.input} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Fecha de Nacimiento</label>
+                      <input type="date" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} style={styles.input} required />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Nacionalidad</label>
+                      <select name="nacionalidad" value={formData.nacionalidad} onChange={handleChange} style={styles.input}>
+                        <option value="Chilena">Chilena</option>
+                        <option value="Argentina">Argentina</option>
+                        <option value="Peruana">Peruana</option>
+                        <option value="Boliviana">Boliviana</option>
+                        <option value="Venezolana">Venezolana</option>
+                        <option value="Colombiana">Colombiana</option>
+                        <option value="Haitiana">Haitiana</option>
+                        <option value="Otra">Otra</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <h3 style={styles.sectionTitle}>Condiciones Especiales</h3>
+                  <div style={styles.checkboxGrid}>
+                    <label style={styles.checkboxLabel}>
+                      <input type="checkbox" name="esMigrante" checked={formData.esMigrante} onChange={handleChange} style={styles.checkbox} />
+                      Migrante
+                    </label>
+                    <label style={styles.checkboxLabel}>
+                      <input type="checkbox" name="puebloOriginario" checked={formData.puebloOriginario} onChange={handleChange} style={styles.checkbox} />
+                      Pueblo Originario
+                    </label>
+                    <label style={styles.checkboxLabel}>
+                      <input type="checkbox" name="privadaLibertad" checked={formData.privadaLibertad} onChange={handleChange} style={styles.checkbox} />
+                      Privada de Libertad
+                    </label>
+                    <label style={styles.checkboxLabel}>
+                      <input type="checkbox" name="transMasculino" checked={formData.transMasculino} onChange={handleChange} style={styles.checkbox} />
+                      Trans Masculino
+                    </label>
+                    <label style={styles.checkboxLabel}>
+                      <input type="checkbox" name="discapacidad" checked={formData.discapacidad} onChange={handleChange} style={styles.checkbox} />
+                      Discapacidad
+                    </label>
+                  </div>
+
+                  {formData.puebloOriginario && (
+                    <div style={styles.conditionalSection}>
+                      <label style={styles.label}>Tipo de Pueblo Originario</label>
+                      <select name="puebloOriginarioTipo" value={formData.puebloOriginarioTipo} onChange={handleChange} style={styles.input}>
+                        <option value="">Seleccione...</option>
+                        <option value="Mapuche">Mapuche</option>
+                        <option value="Aymara">Aymara</option>
+                        <option value="Rapa Nui">Rapa Nui</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {formData.discapacidad && (
+                    <div style={styles.conditionalSection}>
+                      <label style={styles.label}>Tipo de Discapacidad</label>
+                      <select name="discapacidadTipo" value={formData.discapacidadTipo} onChange={handleChange} style={styles.input}>
+                        <option value="">Seleccione...</option>
+                        <option value="Física">Física</option>
+                        <option value="Visual">Visual</option>
+                        <option value="Auditiva">Auditiva</option>
+                        <option value="Intelectual">Intelectual</option>
+                        <option value="Psíquica">Psíquica</option>
+                        <option value="Múltiple">Múltiple</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 1: Contacto */}
+              {activeTab === 1 && (
+                <div style={styles.tabPane}>
+                  <div style={styles.formGrid}>
+                    <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
+                      <label style={styles.label}>Dirección</label>
+                      <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} style={styles.input} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Región</label>
+                      <select name="region" value={formData.region} onChange={handleChange} style={styles.input}>
+                        <option value="">Seleccione...</option>
+                        <option value="Ñuble">Ñuble</option>
+                        <option value="Biobío">Biobío</option>
+                        <option value="Maule">Maule</option>
+                      </select>
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Ciudad</label>
+                      <input type="text" name="ciudad" value={formData.ciudad} onChange={handleChange} style={styles.input} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Comuna</label>
+                      <select name="comuna" value={formData.comuna} onChange={handleChange} style={styles.input} required>
+                        <option value="">Seleccione...</option>
+                        <option value="Chillán">Chillán</option>
+                        <option value="Chillán Viejo">Chillán Viejo</option>
+                        <option value="Pinto">Pinto</option>
+                        <option value="Coihueco">Coihueco</option>
+                        <option value="San Carlos">San Carlos</option>
+                        <option value="Ñiquén">Ñiquén</option>
+                        <option value="San Fabián">San Fabián</option>
+                      </select>
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Teléfono</label>
+                      <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} style={styles.input} placeholder="+56 9 1234 5678" />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Correo Electrónico</label>
+                      <input type="email" name="correo" value={formData.correo} onChange={handleChange} style={styles.input} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Datos de Ingreso */}
+              {activeTab === 2 && (
+                <div style={styles.tabPane}>
+                  <div style={styles.formGrid}>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Tipo Paciente</label>
+                      <select name="tipoPaciente" value={formData.tipoPaciente} onChange={handleChange} style={styles.input}>
+                        <option value="">Seleccione...</option>
+                        <option value="GES">GES</option>
+                        <option value="No GES">No GES</option>
+                        <option value="FONASA">FONASA</option>
+                        <option value="ISAPRE">ISAPRE</option>
+                      </select>
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Origen Ingreso</label>
+                      <select name="origenIngreso" value={formData.origenIngreso} onChange={handleChange} style={styles.input}>
+                        <option value="">Seleccione...</option>
+                        <option value="Urgencia">Urgencia</option>
+                        <option value="Derivación">Derivación</option>
+                        <option value="Programado">Programado</option>
+                      </select>
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>CESFAM Origen</label>
+                      <input type="text" name="cesfam" value={formData.cesfam} onChange={handleChange} style={styles.input} />
+                    </div>
+                  </div>
+
+                  <h3 style={styles.sectionTitle}>Plan de Parto</h3>
+                  <div style={styles.radioGroup}>
+                    <label style={styles.radioLabel}>
+                      <input type="radio" name="planParto" value="si" checked={formData.planParto === 'si'} onChange={handleChange} /> Sí
+                    </label>
+                    <label style={styles.radioLabel}>
+                      <input type="radio" name="planParto" value="no" checked={formData.planParto === 'no'} onChange={handleChange} /> No
+                    </label>
+                  </div>
+
+                  <h3 style={styles.sectionTitle}>Visita Guiada</h3>
+                  <div style={styles.radioGroup}>
+                    <label style={styles.radioLabel}>
+                      <input type="radio" name="visitaGuiada" value="si" checked={formData.visitaGuiada === 'si'} onChange={handleChange} /> Sí
+                    </label>
+                    <label style={styles.radioLabel}>
+                      <input type="radio" name="visitaGuiada" value="no" checked={formData.visitaGuiada === 'no'} onChange={handleChange} /> No
+                    </label>
+                  </div>
+
+                  <h3 style={styles.sectionTitle}>Acompañamiento Ley 20.584</h3>
+                  <div style={styles.radioGroup}>
+                    <label style={styles.radioLabel}>
+                      <input type="radio" name="acompanamiento" value="si" checked={formData.acompanamiento === 'si'} onChange={handleChange} /> Sí
+                    </label>
+                    <label style={styles.radioLabel}>
+                      <input type="radio" name="acompanamiento" value="no" checked={formData.acompanamiento === 'no'} onChange={handleChange} /> No
+                    </label>
+                  </div>
+
+                  {formData.acompanamiento === 'no' && (
+                    <div style={styles.conditionalSection}>
+                      <label style={styles.label}>Motivo de No Acompañamiento</label>
+                      <textarea name="motivoNoAcompanamiento" value={formData.motivoNoAcompanamiento} onChange={handleChange} style={styles.textarea} rows={2} />
+                    </div>
+                  )}
+
+                  {formData.acompanamiento === 'si' && (
+                    <div style={styles.conditionalSection}>
+                      <h4 style={styles.subTitle}>Datos del Acompañante</h4>
+                      <div style={styles.formGrid}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Parentesco</label>
+                          <select name="parentescoAcompanante" value={formData.parentescoAcompanante} onChange={handleChange} style={styles.input}>
+                            <option value="">Seleccione...</option>
+                            <option value="Pareja">Pareja</option>
+                            <option value="Madre">Madre</option>
+                            <option value="Padre">Padre</option>
+                            <option value="Hermana/o">Hermana/o</option>
+                            <option value="Amiga/o">Amiga/o</option>
+                            <option value="Otro">Otro</option>
+                          </select>
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Nombre Acompañante</label>
+                          <input type="text" name="nombreAcompanante" value={formData.nombreAcompanante} onChange={handleChange} style={styles.input} />
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>RUN Acompañante</label>
+                          <input type="text" name="runAcompanante" value={formData.runAcompanante} onChange={handleChange} style={styles.input} placeholder="12.345.678-9" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Botones */}
+            <div style={styles.formActions}>
+              <button type="button" onClick={() => setActiveTab(Math.max(0, activeTab - 1))} disabled={activeTab === 0} style={styles.btnSecondary}>
+                ← Anterior
+              </button>
+              {activeTab < tabs.length - 1 ? (
+                <button type="button" onClick={() => setActiveTab(activeTab + 1)} style={styles.btnPrimary}>
+                  Siguiente →
+                </button>
+              ) : (
+                <button type="submit" disabled={isLoading} style={styles.btnSuccess}>
+                  {isLoading ? '⏳ Guardando...' : '💾 Guardar Paciente'}
+                </button>
+              )}
+            </div>
+          </form>
         </div>
-
-        {error && <div style={styles.error}>{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          {/* Tab 1: Datos Personales */}
-          <div style={{ display: activeTab === 0 ? 'block' : 'none' }}>
-            <h2 style={styles.sectionTitle}>Identificación</h2>
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>RUN</label>
-                <div style={styles.runDisplay}>
-                  <span style={styles.runText}>{formData.run || '--------'}</span>
-                  <span style={styles.runSeparator}>-</span>
-                  <span style={styles.runText}>{formData.dv || '-'}</span>
-                </div>
-                <small style={styles.hint}>Use el buscador de arriba para ingresar el RUN</small>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Nombre</label>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Apellido Paterno</label>
-                <input
-                  type="text"
-                  name="apellidoPaterno"
-                  value={formData.apellidoPaterno}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Apellido Materno</label>
-                <input
-                  type="text"
-                  name="apellidoMaterno"
-                  value={formData.apellidoMaterno}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Fecha de Nacimiento</label>
-                <input
-                  type="date"
-                  name="fechaNacimiento"
-                  value={formData.fechaNacimiento}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Nacionalidad</label>
-                <select
-                  name="nacionalidad"
-                  value={formData.nacionalidad}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="Chilena">Chilena</option>
-                  <option value="Venezolana">Venezolana</option>
-                  <option value="Haitiana">Haitiana</option>
-                  <option value="Peruana">Peruana</option>
-                  <option value="Colombiana">Colombiana</option>
-                  <option value="Boliviana">Boliviana</option>
-                  <option value="Otra">Otra</option>
-                </select>
-              </div>
-            </div>
-
-            <h2 style={styles.sectionTitle}>Condiciones Especiales</h2>
-            <div style={styles.condicionesGrid}>
-              {/* Fila 1 */}
-              <div style={styles.condicionItem}>
-                <label style={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    name="esMigrante"
-                    checked={formData.esMigrante}
-                    onChange={handleChange}
-                    style={styles.checkbox}
-                  />
-                  <span>Migrante</span>
-                </label>
-              </div>
-
-              <div style={styles.condicionItem}>
-                <label style={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    name="puebloOriginario"
-                    checked={formData.puebloOriginario}
-                    onChange={handleChange}
-                    style={styles.checkbox}
-                  />
-                  <span>Pueblo Originario</span>
-                </label>
-              </div>
-
-              <div style={styles.condicionItem}>
-                <label style={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    name="privadaLibertad"
-                    checked={formData.privadaLibertad}
-                    onChange={handleChange}
-                    style={styles.checkbox}
-                  />
-                  <span>Privada de Libertad</span>
-                </label>
-              </div>
-
-              {/* Fila 2 */}
-              <div style={styles.condicionItem}>
-                <label style={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    name="transMasculino"
-                    checked={formData.transMasculino}
-                    onChange={handleChange}
-                    style={styles.checkbox}
-                  />
-                  <span>Trans Masculino</span>
-                </label>
-              </div>
-
-              <div style={styles.condicionItem}>
-                <label style={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    name="discapacidad"
-                    checked={formData.discapacidad}
-                    onChange={handleChange}
-                    style={styles.checkbox}
-                  />
-                  <span>Discapacidad</span>
-                </label>
-              </div>
-
-              <div style={styles.condicionItem}></div>
-            </div>
-
-            {/* Selectores condicionales */}
-            {formData.puebloOriginario && (
-              <div style={styles.conditionalField}>
-                <label style={styles.label}>Especifique Pueblo Originario</label>
-                <select
-                  name="puebloOriginarioTipo"
-                  value={formData.puebloOriginarioTipo}
-                  onChange={handleChange}
-                  style={styles.input}
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="Mapuche">Mapuche</option>
-                  <option value="Aymara">Aymara</option>
-                  <option value="Rapa Nui">Rapa Nui</option>
-                  <option value="Quechua">Quechua</option>
-                  <option value="Diaguita">Diaguita</option>
-                  <option value="Colla">Colla</option>
-                  <option value="Otro">Otro</option>
-                </select>
-              </div>
-            )}
-
-            {formData.discapacidad && (
-              <div style={styles.conditionalField}>
-                <label style={styles.label}>Tipo de Discapacidad</label>
-                <select
-                  name="discapacidadTipo"
-                  value={formData.discapacidadTipo}
-                  onChange={handleChange}
-                  style={styles.input}
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="Fisica">Física</option>
-                  <option value="Sensorial">Sensorial (Visual/Auditiva)</option>
-                  <option value="Mental">Mental (Cognitiva/Psíquica)</option>
-                  <option value="Multiple">Múltiple</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Tab 2: Contacto y Ubicación */}
-          <div style={{ display: activeTab === 1 ? 'block' : 'none' }}>
-            <h2 style={styles.sectionTitle}>Ubicación</h2>
-            <div style={styles.formGrid}>
-              <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                <label style={styles.label}>Dirección</label>
-                <input
-                  type="text"
-                  name="direccion"
-                  value={formData.direccion}
-                  onChange={handleChange}
-                  style={styles.input}
-                  placeholder="Calle, número, depto/casa"
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Región</label>
-                <select
-                  name="region"
-                  value={formData.region}
-                  onChange={handleChange}
-                  style={styles.input}
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="XVI">Ñuble (XVI)</option>
-                  <option value="VIII">Bío Bío (VIII)</option>
-                  <option value="VII">Maule (VII)</option>
-                </select>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Ciudad</label>
-                <input
-                  type="text"
-                  name="ciudad"
-                  value={formData.ciudad}
-                  onChange={handleChange}
-                  style={styles.input}
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Comuna</label>
-                <select
-                  name="comuna"
-                  value={formData.comuna}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="Chillán">Chillán</option>
-                  <option value="Chillán Viejo">Chillán Viejo</option>
-                  <option value="Pinto">Pinto</option>
-                  <option value="Coihueco">Coihueco</option>
-                  <option value="San Carlos">San Carlos</option>
-                  <option value="Ñiquén">Ñiquén</option>
-                  <option value="San Fabián">San Fabián</option>
-                </select>
-              </div>
-            </div>
-
-            <h2 style={styles.sectionTitle}>Contacto</h2>
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Teléfono</label>
-                <input
-                  type="tel"
-                  name="telefono"
-                  value={formData.telefono}
-                  onChange={handleChange}
-                  style={styles.input}
-                  placeholder="+56 9 1234 5678"
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Correo Electrónico</label>
-                <input
-                  type="email"
-                  name="correo"
-                  value={formData.correo}
-                  onChange={handleChange}
-                  style={styles.input}
-                  placeholder="ejemplo@correo.com"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Tab 3: Datos de Ingreso */}
-          <div style={{ display: activeTab === 2 ? 'block' : 'none' }}>
-            <h2 style={styles.sectionTitle}>Datos Administrativos</h2>
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Tipo de Paciente</label>
-                <select
-                  name="tipoPaciente"
-                  value={formData.tipoPaciente}
-                  onChange={handleChange}
-                  style={styles.input}
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="GES">GES</option>
-                  <option value="NO_GES">No GES</option>
-                  <option value="FONASA">FONASA</option>
-                  <option value="ISAPRE">ISAPRE</option>
-                </select>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Origen del Ingreso</label>
-                <select
-                  name="origenIngreso"
-                  value={formData.origenIngreso}
-                  onChange={handleChange}
-                  style={styles.input}
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="Urgencia">Urgencia</option>
-                  <option value="Derivacion">Derivación</option>
-                  <option value="Programado">Programado</option>
-                </select>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>CESFAM / Consultorio Origen</label>
-                <input
-                  type="text"
-                  name="cesfam"
-                  value={formData.cesfam}
-                  onChange={handleChange}
-                  style={styles.input}
-                  placeholder="Ej: CESFAM Ultra Estación"
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <div style={styles.infoBox}>
-                  <span style={styles.infoIcon}>✓</span>
-                  La fecha y hora de ingreso se registran automáticamente (Trazabilidad)
-                </div>
-              </div>
-            </div>
-
-            <h2 style={styles.sectionTitle}>Planificación</h2>
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Plan de Parto</label>
-                <div style={styles.radioGroup}>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      checked={formData.planParto === 'SI'}
-                      onChange={() => handleRadioChange('planParto', 'SI')}
-                    />
-                    Sí
-                  </label>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      checked={formData.planParto === 'NO'}
-                      onChange={() => handleRadioChange('planParto', 'NO')}
-                    />
-                    No
-                  </label>
-                </div>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Visita Guiada</label>
-                <div style={styles.radioGroup}>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      checked={formData.visitaGuiada === 'SI'}
-                      onChange={() => handleRadioChange('visitaGuiada', 'SI')}
-                    />
-                    Sí
-                  </label>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      checked={formData.visitaGuiada === 'NO'}
-                      onChange={() => handleRadioChange('visitaGuiada', 'NO')}
-                    />
-                    No
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <h2 style={styles.sectionTitle}>Acompañamiento Pre-Parto (Ley 20.584)</h2>
-            <div style={styles.formGrid}>
-              <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                <div style={styles.radioGroup}>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      checked={formData.tieneAcompanante === true}
-                      onChange={() => handleRadioChange('tieneAcompanante', true)}
-                    />
-                    Sí (Acompañada)
-                  </label>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      checked={formData.tieneAcompanante === false}
-                      onChange={() => handleRadioChange('tieneAcompanante', false)}
-                    />
-                    No (Sin acompañante)
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {!formData.tieneAcompanante && (
-              <div style={styles.conditionalSection}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Motivo Sin Acompañante</label>
-                  <input
-                    type="text"
-                    name="motivoSinAcompanante"
-                    value={formData.motivoSinAcompanante}
-                    onChange={handleChange}
-                    style={styles.input}
-                    placeholder="Indique el motivo"
-                  />
-                </div>
-              </div>
-            )}
-
-            {formData.tieneAcompanante && (
-              <div style={styles.conditionalSection}>
-                <h3 style={styles.subsectionTitle}>Datos del Acompañante</h3>
-                <div style={styles.formGrid}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Parentesco</label>
-                    <select
-                      name="parentescoAcompanante"
-                      value={formData.parentescoAcompanante}
-                      onChange={handleChange}
-                      style={styles.input}
-                    >
-                      <option value="">Seleccione...</option>
-                      <option value="Pareja">Pareja</option>
-                      <option value="Madre">Madre</option>
-                      <option value="Padre">Padre</option>
-                      <option value="Hermano/a">Hermano/a</option>
-                      <option value="Amigo/a">Amigo/a</option>
-                      <option value="Otro">Otro</option>
-                    </select>
-                  </div>
-
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Nombre Completo</label>
-                    <input
-                      type="text"
-                      name="nombreAcompanante"
-                      value={formData.nombreAcompanante}
-                      onChange={handleChange}
-                      style={styles.input}
-                    />
-                  </div>
-
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>RUN Acompañante</label>
-                    <input
-                      type="text"
-                      name="runAcompanante"
-                      value={formData.runAcompanante}
-                      onChange={handleChange}
-                      style={styles.input}
-                      placeholder="12345678-9"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Botón Submit */}
-          <div style={styles.submitContainer}>
-            <button type="submit" disabled={isLoading} style={styles.submitButton}>
-              {isLoading ? '⏳ Guardando...' : '💾 Guardar Ficha Administrativa'}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
@@ -675,196 +467,176 @@ export default function AdministrativoPage() {
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-  fontFamily: "'Poppins', sans-serif",
-  backgroundColor: '#f5f7fa',
-  minHeight: 'calc(100vh - 60px)', // Resta la altura del header
-  padding: '20px',
-},
-  formContainer: {
+    fontFamily: "'Poppins', sans-serif",
+    minHeight: 'calc(100vh - 60px)',
+    padding: '20px',
+  },
+  content: {
     maxWidth: '1000px',
     margin: '0 auto',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    boxShadow: '0 5px 20px rgba(0,0,0,0.08)',
-    padding: '30px',
   },
-  formTitle: {
-    fontSize: '22px',
+  title: {
+    fontSize: '24px',
     fontWeight: 700,
-    color: '#007bff',
+    color: '#1a365d',
     marginBottom: '20px',
-    paddingBottom: '10px',
-    borderBottom: '2px solid #007bff',
+  },
+  formContainer: {
+    backgroundColor: '#e8f3ff',
+    borderRadius: '12px',
+    boxShadow: '0 5px 20px rgba(0, 123, 255, 0.15)',
+    overflow: 'hidden',
   },
   tabs: {
     display: 'flex',
-    borderBottom: '1px solid #e0e6ed',
-    marginBottom: '25px',
-    gap: '5px',
+    borderBottom: '2px solid #007bff',
   },
   tabButton: {
-    backgroundColor: 'transparent',
+    flex: 1,
+    padding: '15px',
     border: 'none',
-    padding: '12px 20px',
+    backgroundColor: '#d6eaff',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 500,
     color: '#495057',
-    borderBottom: '3px solid transparent',
-    transition: 'all 0.2s',
     fontFamily: "'Poppins', sans-serif",
+    transition: 'all 0.2s',
   },
   tabButtonActive: {
-    color: '#007bff',
-    borderBottomColor: '#007bff',
-    fontWeight: 600,
-    backgroundColor: '#f0f7ff',
+    backgroundColor: '#007bff',
+    color: 'white',
   },
-  sectionTitle: {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: '#495057',
-    marginBottom: '15px',
-    marginTop: '10px',
+  tabContent: {
+    padding: '25px',
   },
-  subsectionTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: '#495057',
-    marginBottom: '15px',
-  },
+  tabPane: {},
   formGrid: {
     display: 'grid',
-    gap: '20px',
     gridTemplateColumns: 'repeat(2, 1fr)',
-    marginBottom: '25px',
+    gap: '15px',
+    marginBottom: '20px',
   },
   formGroup: {},
   label: {
     display: 'block',
-    marginBottom: '6px',
+    marginBottom: '5px',
+    fontSize: '13px',
     fontWeight: 500,
     color: '#495057',
-    fontSize: '13px',
   },
   input: {
     width: '100%',
     padding: '10px 12px',
-    border: '1px solid #e0e6ed',
+    border: '1px solid #c1d9e7',
     borderRadius: '8px',
-    boxSizing: 'border-box',
-    fontFamily: "'Poppins', sans-serif",
     fontSize: '14px',
-    transition: 'border-color 0.2s',
+    fontFamily: "'Poppins', sans-serif",
+    boxSizing: 'border-box',
+    backgroundColor: 'white',
   },
-  runDisplay: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '5px',
+  textarea: {
+    width: '100%',
     padding: '10px 12px',
-    backgroundColor: '#f5f7fa',
+    border: '1px solid #c1d9e7',
     borderRadius: '8px',
-    border: '1px solid #e0e6ed',
+    fontSize: '14px',
+    fontFamily: "'Poppins', sans-serif",
+    boxSizing: 'border-box',
+    backgroundColor: 'white',
+    resize: 'vertical',
   },
-  runText: {
-    fontSize: '16px',
+  sectionTitle: {
+    fontSize: '15px',
+    fontWeight: 600,
+    color: '#1a365d',
+    marginBottom: '15px',
+    marginTop: '20px',
+    paddingBottom: '8px',
+    borderBottom: '1px solid #c1d9e7',
+  },
+  subTitle: {
+    fontSize: '14px',
     fontWeight: 600,
     color: '#495057',
+    marginBottom: '15px',
   },
-  runSeparator: {
-    color: '#999',
-  },
-  hint: {
-    fontSize: '11px',
-    color: '#999',
-    marginTop: '4px',
-    display: 'block',
-  },
-  condicionesGrid: {
+  checkboxGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '15px',
-    marginBottom: '20px',
-  },
-  condicionItem: {
-    padding: '12px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    border: '1px solid #e0e6ed',
+    gap: '10px',
+    marginBottom: '15px',
   },
   checkboxLabel: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    cursor: 'pointer',
     fontSize: '14px',
     color: '#495057',
+    cursor: 'pointer',
   },
   checkbox: {
     width: '18px',
     height: '18px',
-    cursor: 'pointer',
-  },
-  conditionalField: {
-    maxWidth: '300px',
-    marginBottom: '20px',
   },
   radioGroup: {
     display: 'flex',
-    gap: '25px',
+    gap: '20px',
+    marginBottom: '15px',
   },
   radioLabel: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    cursor: 'pointer',
+    gap: '8px',
     fontSize: '14px',
+    color: '#495057',
+    cursor: 'pointer',
   },
   conditionalSection: {
+    backgroundColor: '#d6eaff',
+    padding: '15px',
+    borderRadius: '8px',
     marginTop: '15px',
-    padding: '20px',
-    backgroundColor: '#e8f3ff',
-    borderRadius: '10px',
     border: '1px dashed #007bff',
   },
-  infoBox: {
+  formActions: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px',
-    backgroundColor: '#d4edda',
+    justifyContent: 'space-between',
+    padding: '20px 25px',
+    borderTop: '1px solid #c1d9e7',
+    backgroundColor: '#d6eaff',
+  },
+  btnSecondary: {
+    padding: '12px 25px',
+    border: '1px solid #007bff',
     borderRadius: '8px',
-    fontSize: '13px',
-    color: '#155724',
-  },
-  infoIcon: {
-    fontSize: '16px',
-  },
-  submitContainer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    marginTop: '30px',
-    paddingTop: '20px',
-    borderTop: '1px solid #e0e6ed',
-  },
-  submitButton: {
-    backgroundColor: '#28a745',
-    color: 'white',
-    padding: '14px 30px',
-    border: 'none',
-    borderRadius: '10px',
+    backgroundColor: 'white',
+    color: '#007bff',
+    fontSize: '14px',
     fontWeight: 600,
-    fontSize: '16px',
     cursor: 'pointer',
     fontFamily: "'Poppins', sans-serif",
-    boxShadow: '0 4px 10px rgba(40, 167, 69, 0.3)',
   },
-  error: {
-    backgroundColor: '#fee2e2',
-    color: '#dc2626',
-    padding: '12px',
+  btnPrimary: {
+    padding: '12px 25px',
+    border: 'none',
     borderRadius: '8px',
-    marginBottom: '20px',
+    backgroundColor: '#007bff',
+    color: 'white',
     fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: "'Poppins', sans-serif",
+  },
+  btnSuccess: {
+    padding: '12px 25px',
+    border: 'none',
+    borderRadius: '8px',
+    backgroundColor: '#28a745',
+    color: 'white',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: "'Poppins', sans-serif",
   },
 };

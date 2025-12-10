@@ -1,110 +1,107 @@
 import { useState } from 'react';
-import api from '../../api/axios';
+import { madresApi } from '../../api/MadresApi';
 import type { Madre } from '../../types/models';
 
 interface Props {
   onPacienteEncontrado: (madre: Madre | null) => void;
-  onRutChange: (rut: string, dv: string) => void;
+  onRutChange?: (rut: string, dv: string) => void;
 }
 
 export default function BuscarPaciente({ onPacienteEncontrado, onRutChange }: Props) {
-  const [run, setRun] = useState('');
-  const [dv, setDv] = useState('');
-  const [buscando, setBuscando] = useState(false);
-  const [mensaje, setMensaje] = useState<{ texto: string; tipo: 'success' | 'info' | 'error' } | null>(null);
+  const [rutInput, setRutInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null);
 
-  const calculateDV = (run: string): string => {
-    const cleanRun = run.replace(/\./g, '');
-    let M = 0, S = 1;
-    let num = parseInt(cleanRun);
-    for (; num; num = Math.floor(num / 10)) {
-      S = (S + (num % 10) * (9 - M++ % 6)) % 11;
+  const formatearRut = (value: string) => {
+    let rut = value.replace(/[^0-9kK]/g, '');
+    if (rut.length > 1) {
+      const dv = rut.slice(-1);
+      let cuerpo = rut.slice(0, -1);
+      cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      rut = `${cuerpo}-${dv}`;
     }
-    return S ? String(S - 1) : 'K';
+    return rut.toUpperCase();
   };
 
-  const handleRunChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, '');
-    setRun(value);
-    const calculatedDv = value.length >= 7 ? calculateDV(value) : '';
-    setDv(calculatedDv);
-    onRutChange(value, calculatedDv);
+  const handleRutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatearRut(e.target.value);
+    setRutInput(formatted);
+    
+    if (onRutChange) {
+      const parts = formatted.split('-');
+      const cuerpo = parts[0]?.replace(/\./g, '') || '';
+      const dv = parts[1] || '';
+      onRutChange(cuerpo, dv);
+    }
+    
     setMensaje(null);
   };
 
   const buscarPaciente = async () => {
-    if (run.length < 7) {
-      setMensaje({ texto: 'Ingrese al menos 7 dígitos del RUN', tipo: 'error' });
+    if (rutInput.length < 3) {
+      setMensaje({ tipo: 'error', texto: 'Ingrese un RUT válido' });
       return;
     }
 
-    setBuscando(true);
+    setIsLoading(true);
     setMensaje(null);
 
     try {
-      const rutCompleto = `${run}-${dv}`;
-      const response = await api.get(`/api/madres/?rut=${rutCompleto}`);
+      const madre = await madresApi.buscarPorRut(rutInput);
       
-      if (response.data && response.data.length > 0) {
-        const madre = response.data[0];
+      if (madre) {
+        setMensaje({ tipo: 'success', texto: `Paciente encontrada: ${madre.nombre_completo}` });
         onPacienteEncontrado(madre);
-        setMensaje({ texto: 'Paciente encontrada. Datos cargados.', tipo: 'success' });
       } else {
+        setMensaje({ tipo: 'info', texto: 'Paciente no encontrada. Puede registrar una nueva.' });
         onPacienteEncontrado(null);
-        setMensaje({ texto: 'Paciente no registrada. Complete los datos para nuevo ingreso.', tipo: 'info' });
       }
     } catch {
-      setMensaje({ texto: 'Error al buscar paciente', tipo: 'error' });
+      setMensaje({ tipo: 'error', texto: 'Error al buscar paciente. Verifique la conexión.' });
+      onPacienteEncontrado(null);
     } finally {
-      setBuscando(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      buscarPaciente();
     }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.searchBox}>
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>RUN Paciente</label>
-          <div style={styles.runGroup}>
-            <input
-              type="text"
-              value={run}
-              onChange={handleRunChange}
-              placeholder="Ej: 12345678"
-              style={styles.inputRun}
-              maxLength={9}
-            />
-            <input
-              type="text"
-              value={dv}
-              style={styles.inputDv}
-              disabled
-              placeholder="DV"
-            />
-            <button
-              type="button"
-              onClick={buscarPaciente}
-              disabled={buscando || run.length < 7}
-              style={{
-                ...styles.btnBuscar,
-                opacity: buscando || run.length < 7 ? 0.6 : 1
-              }}
-            >
-              {buscando ? '🔄' : '🔍'} Buscar
-            </button>
-          </div>
+    <div style={styles.searchBox}>
+      <div style={styles.searchRow}>
+        <div style={styles.inputContainer}>
+          <label style={styles.label}>RUT Paciente</label>
+          <input
+            type="text"
+            value={rutInput}
+            onChange={handleRutChange}
+            onKeyPress={handleKeyPress}
+            placeholder="12.345.678-9"
+            style={styles.input}
+            maxLength={12}
+          />
         </div>
+        <button
+          type="button"
+          onClick={buscarPaciente}
+          disabled={isLoading}
+          style={styles.searchBtn}
+        >
+          {isLoading ? '⏳' : '🔍'} Buscar
+        </button>
       </div>
-      
+
       {mensaje && (
         <div style={{
           ...styles.mensaje,
-          backgroundColor: mensaje.tipo === 'success' ? '#d4edda' : mensaje.tipo === 'info' ? '#e8f3ff' : '#fee2e2',
-          color: mensaje.tipo === 'success' ? '#155724' : mensaje.tipo === 'info' ? '#004085' : '#dc2626',
+          backgroundColor: mensaje.tipo === 'success' ? '#d4edda' : mensaje.tipo === 'error' ? '#f8d7da' : '#cce5ff',
+          color: mensaje.tipo === 'success' ? '#155724' : mensaje.tipo === 'error' ? '#721c24' : '#004085',
         }}>
-          {mensaje.tipo === 'success' && '✓ '}
-          {mensaje.tipo === 'info' && 'ℹ '}
-          {mensaje.tipo === 'error' && '⚠ '}
           {mensaje.texto}
         </div>
       )}
@@ -113,49 +110,39 @@ export default function BuscarPaciente({ onPacienteEncontrado, onRutChange }: Pr
 }
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    marginBottom: '25px',
-  },
   searchBox: {
     backgroundColor: '#e8f3ff',
     padding: '20px',
     borderRadius: '10px',
+    marginBottom: '20px',
     border: '2px solid #007bff',
   },
-  inputGroup: {},
+  searchRow: {
+    display: 'flex',
+    gap: '15px',
+    alignItems: 'flex-end',
+  },
+  inputContainer: {
+    flex: 1,
+  },
   label: {
     display: 'block',
-    marginBottom: '8px',
-    fontWeight: 600,
-    color: '#495057',
+    marginBottom: '5px',
     fontSize: '14px',
+    fontWeight: 600,
+    color: '#1a365d',
   },
-  runGroup: {
-    display: 'flex',
-    gap: '8px',
-    alignItems: 'center',
-  },
-  inputRun: {
-    flex: 1,
-    maxWidth: '200px',
-    padding: '12px',
-    border: '1px solid #e0e6ed',
+  input: {
+    width: '100%',
+    padding: '12px 15px',
+    border: '1px solid #c1d9e7',
     borderRadius: '8px',
     fontSize: '16px',
     fontFamily: "'Poppins', sans-serif",
+    boxSizing: 'border-box',
   },
-  inputDv: {
-    width: '50px',
-    padding: '12px',
-    border: '1px solid #e0e6ed',
-    borderRadius: '8px',
-    fontSize: '16px',
-    textAlign: 'center',
-    backgroundColor: '#f5f5f5',
-    fontFamily: "'Poppins', sans-serif",
-  },
-  btnBuscar: {
-    padding: '12px 20px',
+  searchBtn: {
+    padding: '12px 25px',
     backgroundColor: '#007bff',
     color: 'white',
     border: 'none',
@@ -164,12 +151,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 600,
     cursor: 'pointer',
     fontFamily: "'Poppins', sans-serif",
+    whiteSpace: 'nowrap',
   },
   mensaje: {
     marginTop: '15px',
-    padding: '12px 15px',
+    padding: '10px 15px',
     borderRadius: '8px',
     fontSize: '14px',
-    fontWeight: 500,
   },
 };
