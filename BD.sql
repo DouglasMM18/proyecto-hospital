@@ -1,15 +1,10 @@
-
--- CREACIÓN DE LA BASE DE DATOS Y USO
 -- ******************************************************
+-- Creacion de la base de datos
 CREATE DATABASE IF NOT EXISTS sistema_trazabilidad_partos;
 USE sistema_trazabilidad_partos;
 
--- ******************************************************
--- DEFINICIÓN DE TABLAS
-***************************************
-
-
 -- Tabla de Usuarios (clase base)
+
 CREATE TABLE usuarios (
     id_usuario INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -17,7 +12,7 @@ CREATE TABLE usuarios (
     rut VARCHAR(12) NOT NULL UNIQUE,
     usuario_sistema VARCHAR(50) NOT NULL UNIQUE,
     contrasena VARCHAR(255) NOT NULL,
-    tipo_usuario ENUM('Medico', 'Enfermera', 'Supervisor', 'TI') NOT NULL,
+    tipo_usuario ENUM('Medico', 'Enfermera', 'Supervisor', 'TI', 'Administrativo') NOT NULL,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     ultima_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -26,12 +21,12 @@ CREATE TABLE usuarios (
 -- Tabla de Pacientes
 CREATE TABLE pacientes (
     id_paciente INT AUTO_INCREMENT PRIMARY KEY,
-    run VARCHAR(12) NOT NULL UNIQUE, -- Se mantiene 'run' por consistencia con el código original
-    nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL,
-    direccion VARCHAR(255),
+    run VARCHAR(12) NOT NULL UNIQUE,
+    nombre VARCHAR(30) NOT NULL,
+    apellido VARCHAR(30) NOT NULL,
+    direccion VARCHAR(50),
     telefono VARCHAR(20),
-    email VARCHAR(100),
+    email VARCHAR(50),
     fecha_nacimiento DATE NOT NULL,
     edad INT,
     nacionalidad VARCHAR(50),
@@ -43,42 +38,58 @@ CREATE TABLE pacientes (
     IMC DECIMAL(5,2),
     paridad INT,
     control_prenatal BOOLEAN DEFAULT FALSE,
-    consultorio_origen VARCHAR(100),
+    consultorio_origen VARCHAR(50),
     tipo_de_paciente ENUM('Institucional', 'Prehospitalario', 'Fuera de la Red Asistencial', 'Domicilio con Atención Profesional', 'Domicilio sin Atención Profesional'),
     origen_ingreso VARCHAR(50),
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     ultima_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Tablas de Roles (Herencia por Estrategia One-to-One)
+-- Tabla de Médicos (Matrona o especialistas) - AGREGADO CORREO
 CREATE TABLE medicos (
     id_medico INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL UNIQUE,
-    especialidad VARCHAR(100) NOT NULL,
+    especialidad VARCHAR(50) NOT NULL,
+    correo_electronico VARCHAR(50) UNIQUE,
     profesional_responsable BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
+-- Tabla de Enfermeras - AGREGADO CORREO
 CREATE TABLE enfermeras (
     id_enfermera INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL UNIQUE,
-    especialidad VARCHAR(100),
+    especialidad VARCHAR(50),
+    correo_electronico VARCHAR(50) UNIQUE,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
+-- Tabla de Supervisores/Jefes de Área - AGREGADO CORREO
 CREATE TABLE supervisores (
     id_supervisor INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL UNIQUE,
+    correo_electronico VARCHAR(50) UNIQUE,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
+-- Tabla de Encargados de TI - AGREGADO CORREO
 CREATE TABLE encargados_ti (
     id_ti INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL UNIQUE,
+    correo_electronico VARCHAR(50) UNIQUE,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
--- Tabla de Registros de Pacientes (Episodios o Ficha Clínica Principal)
+-- Tabla de Administrativos (NUEVA TABLA)
+CREATE TABLE administrativos (
+    id_administrativo INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario INT NOT NULL UNIQUE,
+    departamento VARCHAR(50),
+    correo_electronico VARCHAR(50) UNIQUE,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+);
+
+-- Tabla de Registros de Pacientes
 CREATE TABLE registros (
     id_registro INT AUTO_INCREMENT PRIMARY KEY,
     id_paciente INT NOT NULL,
@@ -105,7 +116,7 @@ CREATE TABLE registros (
     FOREIGN KEY (id_enfermera) REFERENCES enfermeras(id_enfermera) ON DELETE SET NULL
 );
 
--- Tabla de Controles (Registro de la atención)
+-- Tabla de Controles
 CREATE TABLE controles (
     id_control INT AUTO_INCREMENT PRIMARY KEY,
     id_registro INT NOT NULL,
@@ -150,7 +161,7 @@ CREATE TABLE partos (
     alumbramiento_dirigido BOOLEAN DEFAULT FALSE,
     clasificacion_robson ENUM('Grupo 1', 'Grupo 2.A', 'Grupo 2.B', 'Grupo 3', 'Grupo 4', 'Grupo 5.1', 'Grupo 5.2', 'Grupo 6', 'Grupo 7', 'Grupo 8', 'Grupo 9', 'Grupo 10'),
     posicion_materna_parto ENUM('SEMISENTADA', 'SENTADA', 'LITOTOMIA', 'D. DORSAL', 'D. LATERAL', 'DE PIE', 'CUADRÚPEDA', 'CUCLILLAS', 'OTRO'),
-    ofrecimiento_posiciones_alternativas BOOLEAN DEFAULT FALSE, -- Corrección ortográfica: frecimiento -> ofrecimiento
+    ofrecimiento_posiciones_alternativas BOOLEAN DEFAULT FALSE,
     estado_perineo ENUM('INDEMNE', 'DESGARRO G1', 'DESGARRO G2', 'DESGARRO G3 A', 'DESGARRO G3 B', 'DESGARRO G3 C', 'DESGARRO G4', 'FISURA', 'EPISIOTOMIA'),
     esterilizacion BOOLEAN DEFAULT FALSE,
     revision BOOLEAN DEFAULT FALSE,
@@ -195,14 +206,14 @@ CREATE TABLE recien_nacidos (
     motivo_parto_no_acompanado ENUM('NO DESEA', 'NO LLEGA', 'RURALIDAD', 'SIN PASE DE MOVILIDAD', 'NADIE', 'OTRO', 'OBSERVACIONES'),
     persona_acompanante ENUM('PAREJA', 'MADRE', 'HERMANA', 'AMIGA', 'OTRO'),
     acompanante_secciona_cordon BOOLEAN DEFAULT FALSE,
-    destino_rn VARCHAR(100),
+    destino_rn VARCHAR(50),
     interno BOOLEAN DEFAULT FALSE,
     malformacion_congenita BOOLEAN DEFAULT FALSE,
     descripcion_malformacion TEXT,
     alojamiento_conjunto_puerperio_inmediato BOOLEAN DEFAULT FALSE,
     profilaxis_ocular BOOLEAN DEFAULT FALSE,
     vacuna_hepatitis_B BOOLEAN DEFAULT FALSE,
-    profesional_vacuna_VHB VARCHAR(100),
+    profesional_vacuna_VHB VARCHAR(50),
     reanimacion_basica BOOLEAN DEFAULT FALSE,
     reanimacion_avanzada BOOLEAN DEFAULT FALSE,
     gases_cordon BOOLEAN DEFAULT FALSE,
@@ -213,7 +224,7 @@ CREATE TABLE recien_nacidos (
     FOREIGN KEY (id_parto) REFERENCES partos(id_parto) ON DELETE CASCADE
 );
 
--- Tabla de Exámenes de Pacientes
+-- Tabla de Exámenes (Pacientes)
 CREATE TABLE examenes (
     id_examen INT AUTO_INCREMENT PRIMARY KEY,
     id_registro INT NOT NULL,
@@ -348,7 +359,7 @@ CREATE TABLE estadisticas (
     migrantes INT DEFAULT 0,
     discapacidad INT DEFAULT 0,
     privada_libertad INT DEFAULT 0,
-    `trans` INT DEFAULT 0, -- Se usa `trans` entre comillas invertidas por ser una palabra reservada
+    `trans` INT DEFAULT 0, 
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     ultima_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY periodo_mes_anio (periodo, mes, anio)
@@ -359,7 +370,7 @@ CREATE TABLE auditoria (
     id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
     tipo_usuario VARCHAR(20) NOT NULL,
-    accion VARCHAR(100) NOT NULL,
+    accion VARCHAR(50) NOT NULL,
     tabla_afectada VARCHAR(50),
     id_registro_afectado INT,
     detalles TEXT,
@@ -372,7 +383,7 @@ CREATE TABLE auditoria (
 CREATE TABLE sesiones (
     id_sesion INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
-    token_sesion VARCHAR(255) NOT NULL UNIQUE,
+    token_sesion VARCHAR(100) NOT NULL UNIQUE,
     fecha_inicio DATETIME DEFAULT CURRENT_TIMESTAMP,
     fecha_ultima_actividad DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     fecha_cierre DATETIME,
@@ -402,86 +413,56 @@ CREATE INDEX idx_sesiones_token ON sesiones(token_sesion);
 CREATE INDEX idx_vacunas_rn ON vacunas(id_rn);
 
 -- ******************************************************
--- CREACIÓN DE VISTAS
+-- CREACIÓN DE VISTAS (sin cambios estructurales necesarios)
 -- ******************************************************
 
--- Crear vista para información completa de pacientes
 CREATE VIEW vista_pacientes_completa AS
 SELECT 
-    p.id_paciente,
-    p.run,
-    p.nombre,
-    p.apellido,
-    p.fecha_nacimiento,
-    p.edad,
-    p.telefono,
-    p.email,
-    r.fecha_estimada_parto,
-    r.estado_paciente,
+    p.id_paciente, p.run, p.nombre, p.apellido, p.fecha_nacimiento, p.edad, p.telefono, p.email,
+    r.fecha_estimada_parto, r.estado_paciente,
     COUNT(DISTINCT co.id_control) AS total_controles,
     COUNT(DISTINCT pa.id_parto) AS total_partos,
     MAX(pa.fecha) AS fecha_ultimo_parto
-FROM 
-    pacientes p
-LEFT JOIN 
-    registros r ON p.id_paciente = r.id_paciente
-LEFT JOIN 
-    controles co ON r.id_registro = co.id_registro
-LEFT JOIN 
-    partos pa ON r.id_registro = pa.id_registro
-GROUP BY 
-    p.id_paciente, p.run, p.nombre, p.apellido, p.fecha_nacimiento, 
-    p.edad, p.telefono, p.email, r.fecha_estimada_parto, r.estado_paciente;
+FROM pacientes p
+LEFT JOIN registros r ON p.id_paciente = r.id_paciente
+LEFT JOIN controles co ON r.id_registro = co.id_registro
+LEFT JOIN partos pa ON r.id_registro = pa.id_registro
+GROUP BY p.id_paciente, p.run, p.nombre, p.apellido, p.fecha_nacimiento, p.edad, p.telefono, p.email, r.fecha_estimada_parto, r.estado_paciente;
 
--- Crear vista para información de partos con recién nacidos
 CREATE VIEW vista_partos_completa AS
 SELECT 
-    pa.id_parto,
-    pa.fecha,
-    pa.hora,
-    pa.tipo_parto,
-    p.nombre AS nombre_paciente,
-    p.apellido AS apellido_paciente,
-    p.run AS run_paciente,
+    pa.id_parto, pa.fecha, pa.hora, pa.tipo_parto,
+    p.nombre AS nombre_paciente, p.apellido AS apellido_paciente, p.run AS run_paciente,
     COUNT(rn.id_rn) AS cantidad_recien_nacidos,
-    -- GROUP_CONCAT(CONCAT(rn.sexo, ' - ', rn.peso, 'kg') SEPARATOR ', ') AS datos_recien_nacidos -- Uso de COALESCE para evitar error si no hay RN
-    GROUP_CONCAT(CONCAT(rn.sexo, ' - ', COALESCE(rn.peso, 'N/A'), 'kg') SEPARATOR ', ') AS datos_recien_nacidos 
-FROM 
-    partos pa
-JOIN 
-    registros r ON pa.id_registro = r.id_registro
-JOIN 
-    pacientes p ON r.id_paciente = p.id_paciente
-LEFT JOIN 
-    recien_nacidos rn ON pa.id_parto = rn.id_parto
-GROUP BY 
-    pa.id_parto, pa.fecha, pa.hora, pa.tipo_parto, 
-    p.nombre, p.apellido, p.run;
+    GROUP_CONCAT(CONCAT(rn.sexo, ' - ', COALESCE(rn.peso, 'N/A'), 'kg') SEPARATOR ', ') AS datos_recien_nacidos
+FROM partos pa
+JOIN registros r ON pa.id_registro = r.id_registro
+JOIN pacientes p ON r.id_paciente = p.id_paciente
+LEFT JOIN recien_nacidos rn ON pa.id_parto = rn.id_parto
+GROUP BY pa.id_parto, pa.fecha, pa.hora, pa.tipo_parto, p.nombre, p.apellido, p.run;
 
 -- ******************************************************
--- INSERCIÓN DE DATOS INICIALES
+-- INSERCIÓN DE DATOS INICIALES 
 -- ******************************************************
 
--- Insertar usuarios iniciales (contraseñas hasheadas con bcrypt o similar)
+-- Insertar usuarios iniciales 
 INSERT INTO usuarios (nombre, apellido, rut, usuario_sistema, contrasena, tipo_usuario) VALUES
 ('Douglas', 'Meza', '13456789-0', 'dmeza', '$2a$10$placeholder_hash', 'TI'),
 ('Víctor', 'Torres', '14567890-1', 'vtorres', '$2a$10$placeholder_hash', 'Medico'),
 ('Andrés', 'Zurita', '15678901-2', 'azurita', '$2a$10$placeholder_hash', 'Enfermera'),
-('Eric', 'Gutiérrez', '16789012-3', 'egutierrez', '$2a$10$placeholder_hash', 'Supervisor');
+('Eric', 'Gutiérrez', '16789012-3', 'egutierrez', '$2a$10$placeholder_hash', 'Supervisor'),
+('Susana', 'Reyes', '17890123-4', 'sreyes', '$2a$10$placeholder_hash', 'Administrativo'); 
 
--- Insertar registros especializados para los usuarios
-INSERT INTO encargados_ti (id_usuario) VALUES (1);
-INSERT INTO medicos (id_usuario, especialidad) VALUES (2, 'Obstetricia');
-INSERT INTO enfermeras (id_usuario, especialidad) VALUES (3, 'Materno-Infantil');
-INSERT INTO supervisores (id_usuario) VALUES (4);
+-- Insertar registros especializados para los usuarios (con correo)
+INSERT INTO encargados_ti (id_usuario, correo_electronico) VALUES (1, 'dmeza@hospital.cl');
+INSERT INTO medicos (id_usuario, especialidad, correo_electronico) VALUES (2, 'Obstetricia', 'vtorres@hospital.cl');
+INSERT INTO enfermeras (id_usuario, especialidad, correo_electronico) VALUES (3, 'Materno-Infantil', 'azurita@hospital.cl');
+INSERT INTO supervisores (id_usuario, correo_electronico) VALUES (4, 'egutierrez@hospital.cl');
+INSERT INTO administrativos (id_usuario, departamento, correo_electronico) VALUES (5, 'Finanzas', 'sreyes@hospital.cl'); -- NUEVO REGISTRO DE ROL
 
 -- ******************************************************
--- CREACIÓN DE TRIGGERS
+-- CREACIÓN DE TRIGGERS Y PROCEDIMIENTOS ALMACENADOS (sin cambios)
 -- ******************************************************
-
--- Nota sobre Auditoría: Se usa id_usuario = 1 ('Sistema') por defecto.
--- En una aplicación real, se usaría un valor de sesión/contexto para el id_usuario real.
-
 DELIMITER //
 
 CREATE TRIGGER auditoria_pacientes_insert
@@ -508,11 +489,6 @@ BEGIN
     VALUES (1, 'Sistema', 'DELETE', 'pacientes', OLD.id_paciente, CONCAT('Eliminación paciente: ', OLD.nombre, ' ', OLD.apellido));
 END//
 
--- ******************************************************
--- CREACIÓN DE PROCEDIMIENTOS ALMACENADOS
--- ******************************************************
-
--- Crear procedimiento almacenado para generar informe REM BS22
 CREATE PROCEDURE generar_rem_bs22(IN p_periodo VARCHAR(20))
 BEGIN
     DECLARE v_total_partos INT DEFAULT 0;
@@ -521,25 +497,16 @@ BEGIN
     DECLARE v_cesareas_urgencia INT DEFAULT 0;
     
     SELECT 
-        total_partos, 
-        partos_vaginales, 
-        cesareas_electivas, 
-        cesareas_urgencia 
+        total_partos, partos_vaginales, cesareas_electivas, cesareas_urgencia 
     INTO 
-        v_total_partos, 
-        v_partos_vaginales, 
-        v_cesareas_electivas, 
-        v_cesareas_urgencia
+        v_total_partos, v_partos_vaginales, v_cesareas_electivas, v_cesareas_urgencia
     FROM estadisticas
     WHERE periodo = p_periodo
     LIMIT 1;
     
     INSERT INTO informes (id_usuario_genera, tipo_informe, fecha_generacion, periodo_informe, contenido_informe, estado_informe)
     VALUES (
-        1, -- Asume que el usuario 1 es el generador por defecto o el 'Sistema'
-        'REM BS22', 
-        CURRENT_DATE(), 
-        p_periodo, 
+        1, 'REM BS22', CURRENT_DATE(), p_periodo, 
         CONCAT(
             'Total de partos: ', COALESCE(v_total_partos, 0), '\n',
             'Partos vaginales: ', COALESCE(v_partos_vaginales, 0), '\n',
