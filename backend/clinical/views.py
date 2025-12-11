@@ -16,35 +16,68 @@ from .serializers import (
     RecienNacidoSerializer, 
     MyTokenObtainPairSerializer
 )
-from .permissions import EsSupervisor, EsMatrona, EsEquipoClinico
+# CORRECCIÓN 1: Agregamos EsAdministradorAdmision a los imports
+from .permissions import EsAdministradorAdmision, EsSupervisor, EsMatrona, EsEquipoClinico
 
 # --- VISTA LOGIN ---
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
 # --- VIEWSETS (CRUD) ---
+
 class MadreViewSet(viewsets.ModelViewSet):
+    # CORRECCIÓN 2: Restauramos el queryset y serializer (Vital para que no falle el router)
     queryset = Madre.objects.all().order_by('-created_at')
     serializer_class = MadreSerializer
-    permission_classes = [AllowAny] 
+
+    def get_permissions(self):
+        """
+        Seguridad:
+        - Crear: Solo Admisión (ADMINISTRADOR) o Matrona. (Enfermera NO pasa)
+        - Ver: Equipo Clínico.
+        - Editar/Borrar: Solo Matrona.
+        """
+        if self.action == 'create':
+            permission_classes = [EsAdministradorAdmision | EsMatrona]
+        elif self.action in ['list', 'retrieve']:
+            permission_classes = [EsEquipoClinico | EsAdministradorAdmision]
+        else:
+            permission_classes = [EsMatrona]
+            
+        return [permission() for permission in permission_classes] 
 
 class PartoViewSet(viewsets.ModelViewSet):
     queryset = Parto.objects.all().order_by('-fecha', '-hora')
     serializer_class = PartoSerializer
-    permission_classes = [AllowAny]
+    
+    # CORRECCIÓN 3: Seguridad real en lugar de AllowAny
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [EsEquipoClinico] # Enfermeras sí crean partos
+        elif self.action in ['list', 'retrieve']:
+            permission_classes = [EsEquipoClinico | EsSupervisor]
+        else:
+            permission_classes = [EsMatrona] # Solo Matrona edita/borra
+        return [permission() for permission in permission_classes]
 
 class RecienNacidoViewSet(viewsets.ModelViewSet):
     queryset = RecienNacido.objects.all()
     serializer_class = RecienNacidoSerializer
-    permission_classes = [AllowAny]
+    
+    # CORRECCIÓN 3: Seguridad real
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [EsEquipoClinico]
+        else:
+            permission_classes = [EsMatrona | EsEquipoClinico]
+        return [permission() for permission in permission_classes]
 
-# --- NUEVO: REPORTE EXCEL AVANZADO (.xlsx) ---
+# --- REPORTE EXCEL AVANZADO (.xlsx) ---
 @api_view(['GET'])
-@permission_classes([AllowAny]) # Idealmente cambiar a [EsSupervisor]
+@permission_classes([EsSupervisor | EsMatrona]) # Seguridad Activada
 def reporte_excel_completo(request):
     """
     Genera un Excel nativo con formato, filtros y estadísticas.
-    Cumple con el requerimiento de 'Exportar Data Cruda' pero mejorado.
     """
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -67,7 +100,6 @@ def reporte_excel_completo(request):
     partos = Parto.objects.all().select_related('madre').prefetch_related('recien_nacidos')
     
     for parto in partos:
-        # Manejo de múltiples bebés (gemelos)
         rns = parto.recien_nacidos.all()
         sexo_str = ", ".join([rn.sexo for rn in rns])
         peso_str = ", ".join([str(rn.peso_gramos) for rn in rns])
@@ -80,8 +112,8 @@ def reporte_excel_completo(request):
             parto.tipo_parto,
             parto.edad_gestacional,
             parto.profesional_acargo,
-            parto.madre.rut,       # Se desencripta auto
-            parto.madre.nombre_completo, # Se desencripta auto
+            parto.madre.rut,       
+            parto.madre.nombre_completo,
             sexo_str,
             peso_str,
             apgar_str
@@ -90,21 +122,18 @@ def reporte_excel_completo(request):
     wb.save(response)
     return response
 
-# --- NUEVO: REPORTE PDF (REM) ---
+# --- REPORTE PDF (REM) ---
 @api_view(['GET'])
-@permission_classes([AllowAny]) # Idealmente cambiar a [EsSupervisor]
+@permission_classes([EsSupervisor | EsMatrona]) # Seguridad Activada
 def reporte_pdf_rem(request):
     """
-    Genera un PDF oficial con estadísticas calculadas (Valor Agregado).
+    Genera un PDF oficial con estadísticas calculadas.
     """
-    # 1. Calcular Estadísticas (Inteligencia de Negocios)
     total_partos = Parto.objects.count()
-    # Usamos Q objects para filtros complejos
     cesareas = Parto.objects.filter(Q(tipo_parto__icontains='CESAREA')).count()
     normales = Parto.objects.filter(tipo_parto='EUTOCICO').count()
 
-    # 2. Preparar datos para el HTML
-    partos = Parto.objects.all().select_related('madre').prefetch_related('recien_nacidos').order_by('-fecha')[:50] # Últimos 50 para el PDF
+    partos = Parto.objects.all().select_related('madre').prefetch_related('recien_nacidos').order_by('-fecha')[:50]
 
     context = {
         'partos': partos,
@@ -114,17 +143,15 @@ def reporte_pdf_rem(request):
         'fecha_generacion': timezone.now()
     }
 
-    # 3. Renderizar HTML a PDF
-    template_path = 'reporte_pdf.html' # Debe estar en templates/
-    template = get_template(template_path)
-    html = template.render(context)
-
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="Reporte_REM.pdf"'
-
-    pisa_status = pisa.CreatePDF(html, dest=response)
-
-    if pisa_status.err:
-        return HttpResponse('Tuvimos errores al generar el PDF <pre>' + html + '</pre>')
-    
-    return response
+    try:
+        template = get_template('reporte_pdf.html')
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Reporte_REM.pdf"'
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        
+        if pisa_status.err:
+            return HttpResponse('Error PDF', status=500)
+        return response
+    except Exception as e:
+         return HttpResponse(f"Error generando PDF: {str(e)}", status=500)
