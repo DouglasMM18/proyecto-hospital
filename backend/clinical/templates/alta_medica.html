@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, sans-serif; padding: 40px; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .logo { font-size: 18px; font-weight: bold; }
+        .titulo { font-size: 22px; font-weight: bold; margin-top: 10px; }
+        .warning { border: 2px solid red; padding: 15px; background-color: #fff0f0; color: #cc0000; font-weight: bold; text-align: justify; }
+        .section { margin-bottom: 15px; }
+        .label { font-weight: bold; }
+        .firma-box { margin-top: 80px; display: flex; justify-content: space-between; }
+        .firma { border-top: 1px solid black; width: 40%; text-align: center; padding-top: 10px; display: inline-block; margin: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Hospital Clínico Herminda Martín</div>
+        {% if tipo_alta == 'VOLUNTARIA' %}
+            <div class="titulo" style="color: red;">ALTA VOLUNTARIA (CONTRA INDICACIÓN MÉDICA)</div>
+        {% else %}
+            <div class="titulo">CERTIFICADO DE ALTA MÉDICA</div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <p><span class="label">Paciente:</span> {{ parto.madre.nombre_completo }}</p>
+        <p><span class="label">RUT:</span> {{ parto.madre.rut }}</p>
+        <p><span class="label">Fecha de Ingreso:</span> {{ parto.fecha }}</p>
+    </div>
+
+    {% if tipo_alta == 'VOLUNTARIA' %}
+        <div class="warning">
+            <p>DECLARACIÓN DE EXONERACIÓN DE RESPONSABILIDAD:</p>
+            <p>
+                Yo, identificada anteriormente, declaro que solicito mi egreso hospitalario y el de mi recién nacido 
+                de forma <strong>VOLUNTARIA</strong>, habiendo sido informada detalladamente por el equipo médico 
+                sobre los riesgos para mi salud y la de mi hijo/a que esta decisión conlleva.
+            </p>
+            <p>
+                Asumo plena y total responsabilidad por las consecuencias médico-legales derivadas de esta acción, 
+                <strong>eximiendo de toda responsabilidad</strong> al Hospital Clínico Herminda Martín y a su equipo profesional 
+                por complicaciones, secuelas o fallecimiento que pudieran ocurrir fuera del recinto.
+            </p>
+        </div>
+    {% else %}
+        <div class="section">
+            <p><span class="label">Indicaciones de Cuidado:</span></p>
+            <ul>
+                <li>Control en CESFAM en 7 días.</li>
+                <li>Lactancia materna a libre demanda.</li>
+                <li>Aseo del cordón umbilical con alcohol 70%.</li>
+                <li>Acudir a urgencias en caso de fiebre o sangrado excesivo.</li>
+            </ul>
+        </div>
+    {% endif %}
+
+    <br><br>
+    
+    <div style="width: 100%; text-align: center;">
+        <div class="firma">
+            Firma Paciente (Madre)<br>
+            <small>Acepto condiciones de egreso</small>
+        </div>
+        
+        <div class="firma">
+            {{ responsable }}<br>
+            <strong>Firma Profesional (Matrona/Supervisor)</strong><br>
+            <small>Autoriza el Alta</small>
+        </div>
+    </div>
+
+    <div style="font-size: 9px; color: #999; margin-top: 40px; text-align: center;">
+        Documento Oficial - Sistema de Trazabilidad URNI.<br>
+        Fecha de Emisión: {{ fecha_generacion }} | IP: {{ ip }}
+    </div>
+</body>
+</html>

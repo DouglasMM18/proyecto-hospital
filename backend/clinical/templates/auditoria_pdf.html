@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Courier, monospace; font-size: 10px; }
+        h1 { text-align: center; border-bottom: 1px solid black; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #ddd; text-align: left; padding: 5px; border: 1px solid #000; }
+        td { border: 1px solid #000; padding: 5px; }
+        .alert { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>REPORTE FORENSE DE TRAZABILIDAD DEL SISTEMA</h1>
+    <p><strong>Fecha de Emisión:</strong> {{ fecha_generacion }}</p>
+    <p><strong>Solicitante:</strong> {{ solicitante }}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha/Hora (UTC)</th>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>IP Origen</th>
+                <th>Acción</th>
+                <th>Detalle del Evento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.fecha|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ log.usuario.username }}</td>
+                <td>
+                    {% if log.usuario.perfil %}
+                        {{ log.usuario.perfil.rol }}
+                    {% else %}
+                        SISTEMA/TI
+                    {% endif %}
+                </td>
+                <td>{{ log.ip_address }}</td>
+                <td class="{% if log.accion == 'ELIMINAR' %}alert{% endif %}">{{ log.accion }}</td>
+                <td>{{ log.detalle }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    <p>Fin del reporte. Documento generado para fines de auditoría interna.</p>
+</body>
+</html>
