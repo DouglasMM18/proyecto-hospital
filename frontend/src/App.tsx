@@ -3,11 +3,10 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import AdministrativoPage from './pages/administrativo/AdministrativoPage';
-
-// Páginas placeholder (las desarrollamos después)
-const MatronaPage = () => <div style={{ padding: '20px' }}><h1>👩‍⚕️ Módulo Matrona</h1><p>En desarrollo...</p></div>;
-const EspecialistaPage = () => <div style={{ padding: '20px' }}><h1>👨‍⚕️ Módulo Especialista</h1><p>En desarrollo...</p></div>;
-const AdminTIPage = () => <div style={{ padding: '20px' }}><h1>🔧 Módulo Administrador TI</h1><p>En desarrollo...</p></div>;
+import AdminTIPage from './pages/admin-ti/AdminTIPage';
+import MatronaPage from './pages/matrona/MatronaPage';
+import EnfermeraPage from './pages/enfermera/EnfermeraPage';
+import EspecialistaPage from './pages/especialista/EspecialistaPage';
 
 function App() {
   return (
@@ -25,6 +24,7 @@ function App() {
         >
           <Route index element={<AdministrativoPage />} />
           <Route path="administrativo" element={<AdministrativoPage />} />
+          <Route path="enfermera" element={<EnfermeraPage />} />
           <Route path="matrona" element={<MatronaPage />} />
           <Route path="especialista" element={<EspecialistaPage />} />
           <Route path="admin-ti" element={<AdminTIPage />} />

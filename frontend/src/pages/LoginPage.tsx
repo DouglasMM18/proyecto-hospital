@@ -3,11 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import logo from '../assets/logo.png';
 
-const testCredentials: { [key: string]: { user: string; pass: string; label: string; redirect: string } } = {
-  administrativo: { user: 'admin.hospital', pass: 'adm123', label: 'Administrativo', redirect: '/administrativo' },
-  matrona: { user: 'matrona.turno', pass: 'matrona123', label: 'Matrona', redirect: '/matrona' },
-  especialista: { user: 'dr.especialista', pass: 'esp123', label: 'Especialista', redirect: '/especialista' },
-  admin: { user: 'ti.hospital', pass: 'ti123', label: 'Administrador TI', redirect: '/admin-ti' },
+const testCredentials: { [key: string]: { user: string; pass: string; label: string } } = {
+  administrador: { user: 'administrador_juan', pass: 'Juanadmin1234.', label: 'Administrativo' },
+  enfermera: { user: 'enfermera_ana', pass: '3nfermera1234.', label: 'Enfermera' },
+  matrona: { user: 'matrona_carla', pass: 'M4trona1234.', label: 'Matrona' },
+  supervisor: { user: 'jefe_supervisor', pass: 'Sup3rvisor1234.', label: 'Especialista/Supervisor' },
+  ti: { user: 'TI_pepito', pass: 'P3pito1234.', label: 'Administrador TI' },
+};
+
+// Mapeo de roles del backend a rutas del frontend
+const rolToRoute: { [key: string]: string } = {
+  'ADMINISTRADOR': '/administrativo',
+  'ENFERMERA': '/enfermera',
+  'MATRONA': '/matrona',
+  'SUPERVISOR': '/especialista',
+  'TI': '/admin-ti',
 };
 
 export default function LoginPage() {
@@ -17,22 +27,16 @@ export default function LoginPage() {
   const { login, isLoading, error } = useAuthStore();
   const navigate = useNavigate();
 
-  // Determinar ruta según username
-  const getRedirectPath = (user: string): string => {
-    for (const key in testCredentials) {
-      if (testCredentials[key].user === user) {
-        return testCredentials[key].redirect;
-      }
-    }
-    return '/'; // Por defecto al home
+  const handleRedirect = (rol: string) => {
+    const route = rolToRoute[rol] || '/';
+    navigate(route);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login({ username, password });
-    if (success) {
-      const redirectPath = getRedirectPath(username);
-      navigate(redirectPath);
+    const rol = await login({ username, password });
+    if (rol) {
+      handleRedirect(rol);
     }
   };
 
@@ -43,9 +47,9 @@ export default function LoginPage() {
     }
 
     const credentials = testCredentials[selectedRole];
-    const success = await login({ username: credentials.user, password: credentials.pass });
-    if (success) {
-      navigate(credentials.redirect);
+    const rol = await login({ username: credentials.user, password: credentials.pass });
+    if (rol) {
+      handleRedirect(rol);
     }
   };
 
@@ -54,8 +58,8 @@ export default function LoginPage() {
       <div style={styles.card}>
         <div style={styles.header}>
           <div style={styles.logoContainer}>
-                <img src={logo} alt="Logo Hospital Herminda Martín" style={styles.logo} />
-            </div>
+            <img src={logo} alt="Logo Hospital Herminda Martín" style={styles.logo} />
+          </div>
           <h2 style={styles.hospitalName}>Hospital Herminda Martín</h2>
           <p style={styles.location}>Chillán, Chile</p>
         </div>
@@ -73,7 +77,7 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               style={styles.input}
-              autoComplete='off'
+              autoComplete="off"
               required
             />
           </div>
@@ -86,7 +90,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={styles.input}
-              autoComplete='off'
+              autoComplete="new-password"
               required
             />
           </div>
@@ -157,18 +161,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: '30px',
   },
   logoContainer: {
-  width: '140px',
-  height: '140px',
-  margin: '0 auto 15px',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-logo: {
-  width: '100%',
-  height: '100%',
-  objectFit: 'contain',
-},
+    width: '140px',
+    height: '140px',
+    margin: '0 auto 15px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+  },
   hospitalName: {
     fontSize: '18px',
     color: '#495057',

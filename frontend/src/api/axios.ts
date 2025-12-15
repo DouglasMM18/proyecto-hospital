@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
-
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +19,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar token expirado
+// Interceptor para manejar errores y refresh token
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -30,10 +28,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        try {
-          const response = await axios.post(`${API_URL}/api/token/refresh/`, {
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          const response = await axios.post('http://localhost:8000/api/token/refresh/', {
             refresh: refreshToken,
           });
 
@@ -42,11 +40,12 @@ api.interceptors.response.use(
 
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return api(originalRequest);
-        } catch {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
         }
+      } catch (refreshError) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
 
