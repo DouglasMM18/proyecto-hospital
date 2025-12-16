@@ -28,8 +28,10 @@ export interface Madre {
   nacionalidad: string;
   es_migrante: boolean;
   pueblo_originario: boolean;
-  direccion?: string;
-  telefono?: string;
+  direccion?: string | null;
+  telefono?: string | null;
+  vih_positivo?: string;
+  vdrl_reactivo?: string;
   partos?: Parto[];
 }
 
@@ -41,7 +43,7 @@ export interface Parto {
   tipo_parto: string;
   edad_gestacional: number;
   profesional_acargo: string;
-  observaciones?: string;
+  observaciones?: string | null;
   recien_nacidos?: RecienNacido[];
 }
 
@@ -51,12 +53,12 @@ export interface RecienNacido {
   sexo: string;
   peso_gramos: number;
   talla_cm: number;
-  circunferencia_craneal?: number;
+  circunferencia_craneal?: number | null;
   apgar_1: number;
   apgar_5: number;
   vacuna_bcg: boolean;
   vacuna_hepatitis_b: boolean;
   screening_auditivo: boolean;
   profilaxis_ocular?: boolean;
-  observaciones?: string;
+  observaciones?: string | null;
 }
