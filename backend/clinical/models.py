@@ -8,24 +8,43 @@ from core.fields import EncryptedTextField
 # --- MODELOS CLÍNICOS ---
 
 class Madre(models.Model):
-    # DATOS SENSIBLES
+    # --- DATOS SENSIBLES (Encriptados) ---
     rut = EncryptedTextField(help_text="RUT cifrado (lectura)")
     rut_hash = models.CharField(max_length=64, unique=True, db_index=True, editable=False)
     nombre_completo = EncryptedTextField(help_text="Nombre completo cifrado")
     direccion = EncryptedTextField(null=True, blank=True)
     telefono = EncryptedTextField(null=True, blank=True)
+    email = EncryptedTextField(null=True, blank=True, verbose_name="Correo Electrónico") # Nuevo
     
-    # DATOS DEMOGRÁFICOS
+    # --- DATOS DEMOGRÁFICOS ---
     fecha_nacimiento = models.DateField()
+    ciudad = models.CharField(max_length=100, blank=True, null=True) # Nuevo
     comuna = models.CharField(max_length=100)
     cesfam = models.CharField(max_length=100, blank=True, null=True)
     nacionalidad = models.CharField(max_length=50, default="Chilena")
     es_migrante = models.BooleanField(default=False)
-    pueblo_originario = models.BooleanField(default=False)
     
-    # DATOS CLÍNICOS
+    # Cultural
+    pueblo_originario = models.BooleanField(default=False)
+    detalle_pueblo_originario = models.CharField(max_length=100, blank=True, null=True) # Nuevo
+    
+    # --- DATOS DE INGRESO ---
+    tipo_paciente = models.CharField(max_length=100, blank=True, null=True) # Nuevo (Fonasa/Isapre/etc)
+    origen_ingreso = models.CharField(max_length=100, blank=True, null=True) # Nuevo (Urgencia/Derivada)
+    
+    # --- DATOS CLÍNICOS Y SOCIALES ---
+    tipo_discapacidad = EncryptedTextField(null=True, blank=True) # Nuevo (Sensible)
     vih_positivo = EncryptedTextField(default='NO')
     vdrl_reactivo = EncryptedTextField(default='NO')
+    
+    # Plan de Parto y Educación
+    tiene_plan_parto = models.BooleanField(default=False) # Nuevo
+    realizo_visita_guiada = models.BooleanField(default=False) # Nuevo
+    
+    # Acompañamiento
+    tiene_acompanante = models.BooleanField(default=False) # Nuevo
+    datos_acompanante = EncryptedTextField(null=True, blank=True) # Nuevo (Sensible: Nombre/RUT)
+    motivo_sin_acompanante = EncryptedTextField(null=True, blank=True) # Nuevo (Sensible)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -103,8 +122,7 @@ class PerfilUsuario(models.Model):
 
 @receiver(post_save, sender=User)
 def gestor_perfil_usuario(sender, instance, created, **kwargs):
-    if created:
-        PerfilUsuario.objects.create(user=instance)
+    # Mantenemos la lógica segura: solo guardar si ya existe para no chocar con el Admin
     if hasattr(instance, 'perfil'):
         instance.perfil.save()
 

@@ -15,7 +15,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class MadreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Madre
-        fields = '__all__'
+        fields = '__all__' # Esto tomará automáticamente el email, ciudad, acompañante, etc.
 
 class PartoSerializer(serializers.ModelSerializer):
     class Meta:

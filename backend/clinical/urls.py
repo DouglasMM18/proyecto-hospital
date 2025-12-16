@@ -8,6 +8,7 @@ router.register(r'partos', PartoViewSet)
 router.register(r'recien-nacidos', RecienNacidoViewSet)
 router.register(r'logs', LogActividadViewSet)
 router.register(r'altas', AltaMedicaViewSet)
+router.register(r'usuarios', UserViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
