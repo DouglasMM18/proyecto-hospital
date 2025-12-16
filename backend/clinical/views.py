@@ -50,8 +50,10 @@ class MadreViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_permissions(self):
-        if self.action == 'create': return [EsAdministradorAdmision() | EsMatrona()]
-        if self.action in ['list','retrieve']: return [EsEquipoClinico() | EsAdministradorAdmision()]
+        if self.action == 'create': 
+            return [(EsAdministradorAdmision | EsMatrona)()]
+        if self.action in ['list','retrieve']: 
+            return [(EsEquipoClinico | EsAdministradorAdmision)()]
         return [EsMatrona()]
 
     def perform_create(self, serializer):
@@ -63,8 +65,9 @@ class PartoViewSet(viewsets.ModelViewSet):
     serializer_class = PartoSerializer
     
     def get_permissions(self):
-        if self.action == 'create': return [EsEquipoClinico()]
-        return [EsMatrona() | EsEquipoClinico()]
+        if self.action == 'create': 
+            return [EsEquipoClinico()]
+        return [(EsMatrona | EsEquipoClinico)()]
 
     def perform_create(self, serializer):
         ins = serializer.save()
@@ -80,8 +83,9 @@ class AltaMedicaViewSet(viewsets.ModelViewSet):
     serializer_class = AltaMedicaSerializer
 
     def get_permissions(self):
-        if self.action == 'create': return [EsEquipoClinico()] # Enfermera solicita
-        return [EsMatrona() | EsSupervisor()] # Jefe aprueba
+        if self.action == 'create': 
+            return [EsEquipoClinico()]
+        return [(EsMatrona | EsSupervisor)()]
 
     def perform_create(self, serializer):
         serializer.save(solicitado_por=self.request.user)
@@ -95,6 +99,11 @@ class LogActividadViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = LogActividad.objects.all()
     serializer_class = LogActividadSerializer
     permission_classes = [EsSupervisor | EsMatrona]
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all().order_by('id')
+    serializer_class = UserSerializer
+    permission_classes = [EsSupervisor | EsMatrona] 
 
 # --- REPORTES ---
 

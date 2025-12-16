@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Madre, Parto, RecienNacido, LogActividad, AltaMedica
+from .models import Madre, Parto, RecienNacido, LogActividad, AltaMedica, PerfilUsuario
+from django.contrib.auth.models import User
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -39,3 +40,14 @@ class AltaMedicaSerializer(serializers.ModelSerializer):
     class Meta:
         model = AltaMedica
         fields = '__all__'
+
+class PerfilUsuarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PerfilUsuario
+        fields = ['rol']
+
+class UserSerializer(serializers.ModelSerializer):
+    rol = serializers.CharField(source='perfil.rol', read_only=True)
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'last_login', 'rol']
