@@ -50,11 +50,16 @@ class MadreViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_permissions(self):
-        if self.action == 'create': 
-            return [(EsAdministradorAdmision | EsMatrona)()]
-        if self.action in ['list','retrieve']: 
-            return [(EsEquipoClinico | EsAdministradorAdmision)()]
-        return [EsMatrona()]
+        # LOGICA SIMPLIFICADA (Propuesta de Andrés)
+        if self.action == 'create':
+            # Solo Admisión crea la ficha inicial
+            return [EsAdministradorAdmision()]
+        elif self.action in ['list', 'retrieve']:
+            # Equipo clínico (incluye ahora a Admin) puede ver/buscar
+            return [EsEquipoClinico()]
+        else:
+            # Solo Matrona puede editar/borrar datos sensibles
+            return [EsMatrona()]
 
     def perform_create(self, serializer):
         ins = serializer.save()
@@ -84,8 +89,8 @@ class AltaMedicaViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create': 
-            return [EsEquipoClinico()]
-        return [(EsMatrona | EsSupervisor)()]
+            return [EsEquipoClinico()] # Enfermera solicita
+        return [(EsMatrona | EsSupervisor)()] # Jefe aprueba
 
     def perform_create(self, serializer):
         serializer.save(solicitado_por=self.request.user)
