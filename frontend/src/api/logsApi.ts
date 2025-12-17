@@ -19,7 +19,8 @@ export const logsApi = {
   },
 
   exportarAuditoriaPDF: async (): Promise<void> => {
-    const response = await api.get('/api/reportes/auditoria/', {
+    // CORRECCIÓN: La ruta en urls.py es 'reportes/logs/'
+    const response = await api.get('/api/reportes/logs/', {
       responseType: 'blob',
     });
     

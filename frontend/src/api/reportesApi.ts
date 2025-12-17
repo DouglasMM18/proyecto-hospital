@@ -16,7 +16,8 @@ export const reportesApi = {
   },
 
   descargarPDF: async (): Promise<void> => {
-    const response = await api.get('/api/reportes/pdf/', {
+    // CORRECCIÓN: La ruta en urls.py es 'reportes/rem/'
+    const response = await api.get('/api/reportes/rem/', {
       responseType: 'blob',
     });
     

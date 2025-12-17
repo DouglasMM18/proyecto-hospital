@@ -36,6 +36,7 @@ interface MadreFormData {
   parentezcoAcomp: string;
   nombreAcomp: string;
   runAcomp: string;
+  observaciones: string; // <--- NUEVO CAMPO
 }
 
 const initialFormData: MadreFormData = {
@@ -46,6 +47,7 @@ const initialFormData: MadreFormData = {
   comuna: '', telefono: '', correo: '', tipoPaciente: '', origenIngreso: '',
   consultorioOrigen: '', planParto: '', visitaGuiada: '', acompanamiento: true,
   motivoNoAcomp: '', parentezcoAcomp: '', nombreAcomp: '', runAcomp: '',
+  observaciones: '', // <--- INICIALIZAR
 };
 
 export default function MadreFormPage() {
@@ -55,9 +57,11 @@ export default function MadreFormPage() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+    // Lógica para checkbox vs input normal
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : false;
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -94,20 +98,58 @@ export default function MadreFormPage() {
     setError(null);
 
     try {
+      // 1. Preparar datos del acompañante
+      let datosAcompDetalle = '';
+      if (formData.acompanamiento) {
+        datosAcompDetalle = `${formData.nombreAcomp} (RUT: ${formData.runAcomp}, Relación: ${formData.parentezcoAcomp})`;
+      }
+
+      // 2. Construir Payload mapeando nombres Front -> Back
       const payload = {
+        // Identificación
         rut: `${formData.run}-${formData.dv}`,
         nombre_completo: `${formData.nombre} ${formData.apellidoPaterno} ${formData.apellidoMaterno}`,
         fecha_nacimiento: formData.fechaNacimiento,
-        comuna: formData.comuna,
-        cesfam: formData.consultorioOrigen,
         nacionalidad: formData.nacionalidad,
         es_migrante: formData.inmigrante,
+        
+        // Ubicación y Contacto
+        direccion: formData.direccion,
+        region: formData.region, // Este campo quizás no exista en el modelo, ojo, pero lo enviamos por si acaso
+        ciudad: formData.ciudad,
+        comuna: formData.comuna,
+        telefono: formData.telefono,
+        email: formData.correo,
+
+        // Datos Sociales
         pueblo_originario: formData.puebloOriginario,
+        detalle_pueblo_originario: formData.puebloOriginario ? formData.puebloOriginarioTipo : '',
+        
+        // Datos Clínicos
+        tipo_discapacidad: formData.discapacidad ? formData.discapacidadTipo : '',
+        observaciones: formData.observaciones, // <--- GUARDAMOS OBSERVACIONES
+
+        // Ingreso
+        cesfam: formData.consultorioOrigen,
+        tipo_paciente: formData.tipoPaciente,
+        origen_ingreso: formData.origenIngreso,
+
+        // Planificación
+        tiene_plan_parto: formData.planParto === 'SI',
+        realizo_visita_guiada: formData.visitaGuiada === 'SI',
+
+        // Acompañamiento
+        tiene_acompanante: formData.acompanamiento,
+        datos_acompanante: datosAcompDetalle,
+        motivo_sin_acompanante: formData.motivoNoAcomp
       };
 
+      console.log("Enviando:", payload);
       await api.post('/api/madres/', payload);
-      navigate('/madres');
+      navigate('/madres'); // Asegúrate que esta ruta existe, sino usa '/'
+      
     } catch (err: unknown) {
+      console.error(err);
       const error = err as { response?: { data?: { detail?: string } } };
       setError(error.response?.data?.detail || 'Error al guardar los datos');
     } finally {
@@ -340,7 +382,7 @@ export default function MadreFormPage() {
 
               <div style={styles.formGroup}>
                 <p style={styles.infoText}>
-                  ✓ La Fecha y Hora de Ingreso se registrarán automáticamente al guardar los datos (Trazabilidad).
+                  ✓ La Fecha y Hora de Ingreso se registrarán automáticamente al guardar los datos.
                 </p>
               </div>
             </div>
@@ -418,6 +460,23 @@ export default function MadreFormPage() {
                 </div>
               </div>
             )}
+
+            {/* SECCIÓN NUEVA: OBSERVACIONES */}
+            <div style={{ marginTop: '25px' }}>
+                <h3 style={styles.subsectionTitle}>Observaciones Clínicas / Generales</h3>
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Detalle de Observaciones</label>
+                    <textarea 
+                        name="observaciones" 
+                        value={formData.observaciones} 
+                        onChange={handleChange} 
+                        style={styles.textarea} 
+                        rows={3} 
+                        placeholder="Ingrese observaciones relevantes..."
+                    />
+                </div>
+            </div>
+
           </div>
 
           <button type="submit" disabled={isLoading} style={styles.submitButton}>
@@ -510,6 +569,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     boxSizing: 'border-box',
     fontFamily: "'Poppins', sans-serif",
     fontSize: '15px',
+  },
+  textarea: {
+    width: '100%',
+    padding: '10px 12px',
+    border: '1px solid #e0e6ed',
+    borderRadius: '8px',
+    boxSizing: 'border-box',
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: '15px',
+    resize: 'vertical',
   },
   runGroup: {
     display: 'flex',

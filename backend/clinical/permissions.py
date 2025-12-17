@@ -2,34 +2,26 @@ from rest_framework import permissions
 
 class EsAdministradorAdmision(permissions.BasePermission):
     def has_permission(self, request, view):
-        # 1. Autenticado?
-        if not request.user.is_authenticated: 
-            return False
-        # 2. Tiene perfil?
-        if not hasattr(request.user, 'perfil'):
-            return False
-        # 3. Es Admin?
-        return request.user.is_superuser or request.user.perfil.rol == 'ADMINISTRADOR'
-
-class EsEquipoClinico(permissions.BasePermission):
-    def has_permission(self, request, view):
-        if not request.user.is_authenticated:
-            return False
-        if not hasattr(request.user, 'perfil'):
-            return False
-        rol = request.user.perfil.rol
-        return request.user.is_superuser or rol in ['ADMINISTRADOR' , 'ENFERMERA', 'MATRONA', 'SUPERVISOR']
+        if request.user.is_superuser or request.user.is_staff: return True
+        return bool(request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol == 'ADMISION')
 
 class EsMatrona(permissions.BasePermission):
     def has_permission(self, request, view):
-        if not request.user.is_authenticated: return False
-        if not hasattr(request.user, 'perfil'): return False
+        if request.user.is_superuser: return True
+        return bool(request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol == 'MATRONA')
 
-        return request.user.is_superuser or request.user.perfil.rol == 'MATRONA'
+class EsEquipoClinico(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_superuser: return True
+        return bool(request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol in ['MATRONA', 'MEDICO', 'ENFERMERA', 'TECNICO'])
 
 class EsSupervisor(permissions.BasePermission):
     def has_permission(self, request, view):
-        if not request.user.is_authenticated: return False
-        if not hasattr(request.user, 'perfil'): return False
+        if request.user.is_superuser: return True
+        return bool(request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol == 'SUPERVISOR')
 
-        return request.user.is_superuser or request.user.perfil.rol == 'SUPERVISOR'
+class EsAdminTI(permissions.BasePermission):
+    def has_permission(self, request, view):
+        # TIene acceso si es Superuser, Staff o tiene rol TI/ADMIN_TI
+        if request.user.is_superuser or request.user.is_staff: return True
+        return bool(request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol in ['TI', 'ADMIN_TI'])

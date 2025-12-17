@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { madresApi } from '../../api/MadresApi';
+import { madresApi } from '../../api/madresApi'; // Asegúrate que el archivo sea madresApi.ts (minúscula)
 import { partosApi } from '../../api/partosApi';
 import { reportesApi } from '../../api/reportesApi';
 import { logsApi, type LogActividad } from '../../api/logsApi';
@@ -37,8 +37,9 @@ interface FiltrosInforme {
   comuna: string;
 }
 
-export default function EspecialistaPage() {
-  const [activeTab, setActiveTab] = useState<'informes' | 'logs' | 'autorizaciones'>('informes');
+// Aceptamos la prop "initialTab" para saber qué abrir
+export default function EspecialistaPage({ initialTab = 'informes' }: { initialTab?: 'informes' | 'logs' | 'autorizaciones' }) {
+  const [activeTab, setActiveTab] = useState<'informes' | 'logs' | 'autorizaciones'>(initialTab);
   
   // Estado para Informes
   const [filtros, setFiltros] = useState<FiltrosInforme>({
@@ -63,8 +64,15 @@ export default function EspecialistaPage() {
   const [altasPendientes, setAltasPendientes] = useState<AltaMedica[]>([]);
   const [altasLoading, setAltasLoading] = useState(false);
 
+  // Escuchar cambios en la prop initialTab
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   useEffect(() => {
     cargarEstadisticas();
+    // Cargar contador de altas siempre para el badge
+    cargarAltasPendientes();
   }, []);
 
   useEffect(() => {
@@ -117,7 +125,8 @@ export default function EspecialistaPage() {
   };
 
   const cargarAltasPendientes = async () => {
-    setAltasLoading(true);
+    // No ponemos loading global para no bloquear si es carga de fondo
+    if(activeTab === 'autorizaciones') setAltasLoading(true);
     try {
       const data = await altasApi.getPendientes();
       setAltasPendientes(data);

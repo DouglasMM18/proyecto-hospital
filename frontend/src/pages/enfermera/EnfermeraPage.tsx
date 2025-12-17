@@ -2,6 +2,7 @@ import { useState } from 'react';
 import BuscarPaciente from '../../components/forms/BuscarPaciente';
 import type { Madre } from '../../types/models';
 import { partosApi, recienNacidosApi } from '../../api/partosApi';
+import api from '../../api/axios'; // <--- IMPORTANTE: Agregado para actualizar la madre
 
 interface DatosClinicosMADRE {
   grupo_sanguineo: string;
@@ -195,64 +196,91 @@ export default function EnfermeraPage() {
     ));
   };
 
+  // --- FUNCIÓN CORREGIDA ---
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
   
-  if (!madreSeleccionada?.id) {
-    alert('Debe seleccionar una paciente primero');
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    // Crear el parto
-    const partoData = {
-      madre: madreSeleccionada.id,
-      fecha: datosParto.fecha,
-      hora: datosParto.hora,
-      tipo_parto: datosParto.tipo_parto,
-      edad_gestacional: Number(datosParto.edad_gestacional),
-      profesional_acargo: datosParto.profesional_acargo,
-      observaciones: datosParto.complicaciones,
-    };
-
-    const partoCreado = await partosApi.create(partoData);
-
-    // Crear los recién nacidos
-    for (const rn of recienNacidos) {
-      const rnData = {
-        parto: partoCreado.id!,
-        sexo: rn.sexo,
-        peso_gramos: Number(rn.peso_gramos),
-        talla_cm: Number(rn.talla_cm),
-        circunferencia_craneal: Number(rn.circunferencia_craneal) || undefined,
-        apgar_1: Number(rn.apgar_1),
-        apgar_5: Number(rn.apgar_5),
-        vacuna_bcg: rn.vacuna_bcg,
-        vacuna_hepatitis_b: rn.vacuna_hepatitis_b,
-        screening_auditivo: rn.screening_auditivo,
-        observaciones: rn.observaciones,
-      };
-
-      await recienNacidosApi.create(rnData);
+    if (!madreSeleccionada?.id) {
+      alert('Debe seleccionar una paciente primero');
+      return;
     }
-
-    alert('Registro clínico guardado correctamente');
-    
-    // Limpiar formulario
-    setDatosClinicos(initialDatosClinicos);
-    setDatosParto(initialDatosParto);
-    setRecienNacidos([{ ...initialRecienNacido }]);
-    setActiveTab(0);
-
-  } catch (error) {
-    console.error(error);
-    alert('Error al guardar registro clínico');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  
+    setIsLoading(true);
+  
+    try {
+      // 1. GUARDAR DATOS CLÍNICOS DE LA MADRE (Actualización)
+      const datosMadrePayload = {
+        grupo_sanguineo: datosClinicos.grupo_sanguineo,
+        factor_rh: datosClinicos.factor_rh,
+        alergias: datosClinicos.alergias,
+        antecedentes_medicos: datosClinicos.antecedentes_medicos,
+        antecedentes_obstetricos: datosClinicos.antecedentes_obstetricos,
+        gestas: datosClinicos.gestas === '' ? 0 : datosClinicos.gestas,
+        partos_vaginales: datosClinicos.partos === '' ? 0 : datosClinicos.partos, // Mapeamos partos -> partos_vaginales
+        abortos: datosClinicos.abortos === '' ? 0 : datosClinicos.abortos,
+        cesareas: datosClinicos.cesareas === '' ? 0 : datosClinicos.cesareas,
+        control_prenatal: datosClinicos.control_prenatal,
+        num_controles: datosClinicos.num_controles === '' ? 0 : datosClinicos.num_controles,
+        // Enviar patologías como campos individuales si tu modelo los tiene
+        vih_positivo: datosClinicos.patologias.vih ? 'SI' : 'NO',
+        // Otros campos si existen en tu modelo:
+        // diabetes_gestacional: datosClinicos.patologias.diabetes_gestacional,
+        // preeclampsia: datosClinicos.patologias.preeclampsia,
+      };
+  
+      // Usamos PATCH para actualizar parcialmente la ficha de la madre
+      await api.patch(`/api/madres/${madreSeleccionada.id}/`, datosMadrePayload);
+  
+      // 2. CREAR PARTO (Solo si se ingresó fecha)
+      if (datosParto.fecha && datosParto.hora) {
+          const partoData = {
+            madre: madreSeleccionada.id,
+            fecha: datosParto.fecha,
+            hora: datosParto.hora,
+            tipo_parto: datosParto.tipo_parto,
+            edad_gestacional: Number(datosParto.edad_gestacional),
+            profesional_acargo: datosParto.profesional_acargo,
+            observaciones: datosParto.complicaciones,
+          };
+  
+          const partoCreado = await partosApi.create(partoData);
+  
+          // Crear los recién nacidos
+          for (const rn of recienNacidos) {
+            const rnData = {
+              parto: partoCreado.id!,
+              sexo: rn.sexo,
+              peso_gramos: Number(rn.peso_gramos),
+              talla_cm: Number(rn.talla_cm),
+              circunferencia_craneal: Number(rn.circunferencia_craneal) || undefined,
+              apgar_1: Number(rn.apgar_1),
+              apgar_5: Number(rn.apgar_5),
+              vacuna_bcg: rn.vacuna_bcg,
+              vacuna_hepatitis_b: rn.vacuna_hepatitis_b,
+              screening_auditivo: rn.screening_auditivo,
+              observaciones: rn.observaciones,
+            };
+  
+            await recienNacidosApi.create(rnData);
+          }
+          alert('✅ Registro Completo: Datos Clínicos y Parto guardados correctamente.');
+      } else {
+          alert('✅ Datos Clínicos de la madre actualizados correctamente.');
+      }
+      
+      // Limpiar formulario y volver a tab inicial
+      setDatosClinicos(initialDatosClinicos);
+      setDatosParto(initialDatosParto);
+      setRecienNacidos([{ ...initialRecienNacido }]);
+      setActiveTab(0);
+  
+    } catch (error) {
+      console.error(error);
+      alert('Error al guardar. Verifique los datos e intente nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const tabs = [
     { id: 'clinicos', label: '🏥 Datos Clínicos' },
