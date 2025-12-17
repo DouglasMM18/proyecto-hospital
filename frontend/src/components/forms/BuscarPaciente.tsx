@@ -3,8 +3,8 @@ import { madresApi } from '../../api/MadresApi';
 import type { Madre } from '../../types/models';
 
 interface Props {
-  onPacienteEncontrado: (madre: Madre | null) => void;
-  onRutChange?: (rut: string, dv: string) => void;
+  onPacienteEncontrado: (madre: Madre | null, rutBuscado?: string) => void;
+  onRutChange?: (rut: string) => void;
 }
 
 export default function BuscarPaciente({ onPacienteEncontrado, onRutChange }: Props) {
@@ -28,10 +28,9 @@ export default function BuscarPaciente({ onPacienteEncontrado, onRutChange }: Pr
     setRutInput(formatted);
     
     if (onRutChange) {
-      const parts = formatted.split('-');
-      const cuerpo = parts[0]?.replace(/\./g, '') || '';
-      const dv = parts[1] || '';
-      onRutChange(cuerpo, dv);
+      // Enviar RUT sin formatear (solo números y K)
+      const rutLimpio = formatted.replace(/\./g, '').replace(/-/g, '');
+      onRutChange(rutLimpio);
     }
     
     setMensaje(null);
@@ -46,19 +45,22 @@ export default function BuscarPaciente({ onPacienteEncontrado, onRutChange }: Pr
     setIsLoading(true);
     setMensaje(null);
 
+    // RUT limpio para búsqueda
+    const rutLimpio = rutInput.replace(/\./g, '').replace(/-/g, '').toUpperCase();
+
     try {
-      const madre = await madresApi.buscarPorRut(rutInput);
+      const madre = await madresApi.buscarPorRut(rutLimpio);
       
       if (madre) {
         setMensaje({ tipo: 'success', texto: `Paciente encontrada: ${madre.nombre_completo}` });
-        onPacienteEncontrado(madre);
+        onPacienteEncontrado(madre, rutLimpio);
       } else {
         setMensaje({ tipo: 'info', texto: 'Paciente no encontrada. Puede registrar una nueva.' });
-        onPacienteEncontrado(null);
+        onPacienteEncontrado(null, rutLimpio);
       }
     } catch {
       setMensaje({ tipo: 'error', texto: 'Error al buscar paciente. Verifique la conexión.' });
-      onPacienteEncontrado(null);
+      onPacienteEncontrado(null, rutLimpio);
     } finally {
       setIsLoading(false);
     }

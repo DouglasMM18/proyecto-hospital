@@ -3,7 +3,7 @@ import { madresApi } from '../../api/madresApi'; // Asegúrate que el archivo se
 import { partosApi } from '../../api/partosApi';
 import { reportesApi } from '../../api/reportesApi';
 import { logsApi, type LogActividad } from '../../api/logsApi';
-import { altasApi, type AltaMedica } from '../../api/altasApi';
+import { altasApi, type Alta } from '../../api/altasApi';
 import type { Madre, Parto } from '../../types/models';
 
 interface DatoInforme {
@@ -61,7 +61,7 @@ export default function EspecialistaPage({ initialTab = 'informes' }: { initialT
   const [logsLoading, setLogsLoading] = useState(false);
 
   // Estado para Autorizaciones
-  const [altasPendientes, setAltasPendientes] = useState<AltaMedica[]>([]);
+  const [altasPendientes, setAltasPendientes] = useState<Alta[]>([]);
   const [altasLoading, setAltasLoading] = useState(false);
 
   // Escuchar cambios en la prop initialTab
@@ -197,7 +197,7 @@ export default function EspecialistaPage({ initialTab = 'informes' }: { initialT
     catch { alert('Error al descargar auditoría'); }
   };
 
-  const handleAutorizar = async (alta: AltaMedica) => {
+  const handleAutorizar = async (alta: Alta) => {
     if (!confirm(`¿Autorizar alta ID ${alta.id}?`)) return;
     try {
       await altasApi.autorizar(alta.id!);
@@ -208,7 +208,7 @@ export default function EspecialistaPage({ initialTab = 'informes' }: { initialT
     }
   };
 
-  const handleRechazar = async (alta: AltaMedica) => {
+  const handleRechazar = async (alta: Alta) => {
     const motivo = prompt('Motivo del rechazo:');
     if (!motivo) return;
     try {

@@ -1,65 +1,66 @@
 import api from './axios';
 
-export interface AltaMedica {
+export interface Alta {
   id?: number;
-  tipo: 'MEDICA' | 'VOLUNTARIA';
+  tipo: string;
   parto: number;
+  estado?: string;
   solicitado_por?: number;
+  autorizado_por?: number;
   fecha_solicitud?: string;
-  estado: 'PENDIENTE' | 'AUTORIZADA' | 'RECHAZADA';
-  autorizado_por?: number | null;
-  fecha_autorizacion?: string | null;
-  observaciones: string;
-  // Campos extra del serializer
+  fecha_autorizacion?: string;
+  observaciones?: string;
   madre_nombre?: string;
   solicitante?: string;
   autorizador?: string;
 }
 
+// Alias para compatibilidad
+export type AltaMedica = Alta;
+
 export const altasApi = {
-  getAll: async (): Promise<AltaMedica[]> => {
+  getAll: async (): Promise<Alta[]> => {
     const response = await api.get('/api/altas/');
     return response.data;
   },
 
-  getPendientes: async (): Promise<AltaMedica[]> => {
+  getPendientes: async (): Promise<Alta[]> => {
     const response = await api.get('/api/altas/');
-    const altas: AltaMedica[] = response.data;
-    return altas.filter(a => a.estado === 'PENDIENTE');
+    return response.data.filter((a: Alta) => a.estado === 'PENDIENTE');
   },
 
-  create: async (data: Partial<AltaMedica>): Promise<AltaMedica> => {
+  getById: async (id: number): Promise<Alta> => {
+    const response = await api.get(`/api/altas/${id}/`);
+    return response.data;
+  },
+
+  create: async (data: Partial<Alta>): Promise<Alta> => {
     const response = await api.post('/api/altas/', data);
     return response.data;
   },
 
-  autorizar: async (id: number, observaciones: string = ''): Promise<AltaMedica> => {
+  autorizar: async (id: number, observaciones?: string): Promise<Alta> => {
     const response = await api.patch(`/api/altas/${id}/`, {
       estado: 'AUTORIZADA',
-      observaciones,
+      observaciones: observaciones || '',
     });
     return response.data;
   },
 
-  rechazar: async (id: number, observaciones: string): Promise<AltaMedica> => {
+  rechazar: async (id: number, observaciones?: string): Promise<Alta> => {
     const response = await api.patch(`/api/altas/${id}/`, {
       estado: 'RECHAZADA',
-      observaciones,
+      observaciones: observaciones || '',
     });
     return response.data;
   },
 
-  descargarPDF: async (id: number): Promise<void> => {
+  descargarPDF: async (id: number): Promise<Blob> => {
     const response = await api.get(`/api/reportes/alta/${id}/`, {
       responseType: 'blob',
     });
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Alta_${id}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    return response.data;
   },
 };
+
+export default altasApi;
