@@ -3,7 +3,7 @@ import BuscarPaciente from '../../components/forms/BuscarPaciente';
 import { madresApi } from '../../api/MadresApi';
 import type { Madre } from '../../types/models';
 
-// Datos para los selects (en producción vendrían del backend)
+// Datos para los selects
 const COMUNAS = ['Aisén', 'Algarrobo', 'Alhué', 'Alto Biobío', 'Alto del Carmen', 'Alto Hospicio', 
  'Ancud', 'Andacollo', 'Angol', 'Antártica', 'Antofagasta', 'Antuco', 
  'Arauco', 'Arica', 'Buin', 'Bulnes', 
@@ -102,33 +102,19 @@ const CESFAM_LIST = [
  'CESFAM San Nicolás'];
 
 const NACIONALIDADES = [
-  'Chilena', 'Argentina', 'Peruana', 'Boliviana', 'Venezolana', 
-  'Colombiana', 'Haitiana', 'Ecuatoriana', 'Brasileña', 'Otra'
-];
-
+  "AFGANA", "ALBANESA", "ALEMANA", "ANDORRANA", "ANGOLEÑA", "ANTIGUANA", "ARABESA", "ARGELINA", "ARGENTINA", "ARMENIA", "ARUBEÑA", "AUSTRALIANA", "AUSTRIACA", "AZERBAIYANA", "BAHAMESA", "BAHREINÍ", "BANGLADESÍ", "BARBADENSE", "BELGA", "BELICEÑA", "BENINÉSA", "BIELORRUSA", "BIRMANA", "BOLIVIANA", "BOSNIA", "BOTSUANA", "BRASILEÑA", "BRUNEANA", "BÚLGARA", "BURKINABÉ", "BURUNDESA", "BUTANESA", "CABOVERDIANA", "CAMBOYANA", "CAMERUNESA", "CANADIENSE", "CATARÍ", "CHADIANA", "CHILENA", "CHINA", "CHIPRIOTA", "COLOMBIANA", "COMORENSE", "CONGOLEÑA", "COREANA", "COSTARRICENSE", "CROATA", "CUBANA", "DANESA", "DOMINICA", "DOMINICANA", "ECUATORIANA", "EGIPCIA", "EMIRATÍ", "ERITREA", "ESLOVACA", "ESLOVENA", "ESPAÑOLA", "ESTADOUNIDENSE", "ESTONIA", "ETÍOPE", "FILIPINA", "FINLANDESA", "FIYIANA", "FRANCESA", "GABONESA", "GAMBIANA", "GEORGIANA", "GHANESA", "GRANADINA", "GRIEGA", "GUATEMALTECA", "GUINEANA", "GUYANESA", "HAITIANA", "HONDUREÑA", "HÚNGARA", "INDIA", "INDONESIA", "IRAQUÍ", "IRANÍ", "IRLANDESA", "ISLANDESA", "ISRAELÍ", "ITALIANA", "JAMAIQUINA", "JAPONESA", "JORDANIE", "KAZAJA", "KENIATA", "KIRGUISA", "KIRIBATIANA", "KUWAITÍ", "LAOSIANA", "LESOTENSE", "LETÓN", "LIBANESA", "LIBERIANA", "LIBIA", "LIECHTENSTEINIANA", "LITUANA", "LUXEMBURGUESA", "MACEDONIA", "MADAGASQUENSE", "MALASIA", "MALAWI", "MALDIVA", "MALIENSE", "MALTESA", "MARROQUÍ", "MARSHALESA", "MAURICIANA", "MAURITANA", "MEXICANA", "MICRONESIA", "MOLDAVA", "MONEGASCA", "MONGOLA", "MONTENEGRINA", "MOZAMBIQUEÑA", "NAMIBIA", "NAURUANA", "NEPALÍ", "NICARAGÜENSE", "NIGERIANA", "NIGERINA", "NORCOREANA", "NORUEGA", "NEOZELANDESA", "OMANÍ", "PAQUISTANÍ", "PALAUIANA", "PALESTINA", "PANAMEÑA", "PAPÚ", "PARAGUAYA", "PERUANA", "POLACA", "PORTUGUESA", "PUERTORRIQUEÑA", "RUANDESA", "RUMANA", "RUSA", "SALOMONENSE", "SALVADOREÑA", "SAMOANA", "SANTALUCIENSE", "SENEGALESA", "SERBIA", "SEYCHELLENSE", "SIERRALEONESA", "SINGAPURENSE", "SIRIA", "SOMALÍ", "SRILANQUESA", "SUDAFRICANA", "SUDANESA", "SUECA", "SUIZA", "SURINAMESA", "TAILANDESA", "TANZANA", "TAYIKA", "TIMORENSE", "TOGOLEÑA", "TONGANA", "TRINITENSE", "TUNECINA", "TURCA", "TURCOMANA", "TUVALUANA", "UCRANIANA", "UGANDESA", "URUGUAYA", "UZBEKA", "VANUATUENSE", "VENEZOLANA", "VIETNAMITA", "YEMENÍ", "YIBUTIANA", "ZAMBIANA", "ZIMBABUENSE"];
 const PUEBLOS_ORIGINARIOS = [
-  'Aymara', 
- 'Quechua', 
- 'Likan Antay (Atacameño)', 
- 'Colla', 
- 'Diaguita', 
- 'Rapa Nui', 
- 'Mapuche', 
- 'Kawésqar', 
- 'Yagán (Yámana)', 
- 'Chango', 
- 'Selk\'nam',
- 'Otro'
+  'Mapuche', 'Aymara', 'Rapa Nui', 'Lican Antai', 'Quechua', 
+  'Colla', 'Diaguita', 'Kawésqar', 'Yagán', 'Otro'
 ];
 
 const REGIONES = [
- 'Antofagasta','Arica y Parinacota', 'Atacama', 'Aysén del General Carlos Ibáñez del Campo','Biobío', 'Coquimbo', 'La Araucanía', 'Libertador General Bernardo O\'Higgins', 'Los Lagos', 'Los Ríos', 'Magallanes y de la Antártica Chilena','Maule', 'Metropolitana de Santiago','Ñuble', 'Tarapacá', 'Valparaíso'
+  'Ñuble', 'Biobío', 'Maule', 'Metropolitana', 'Valparaíso', 'Araucanía'
 ];
 
 interface FormData {
   id: number | null;
-  run: string;
-  dv: string;
+  rut: string;
   nombre: string;
   apellidoPaterno: string;
   apellidoMaterno: string;
@@ -161,8 +147,7 @@ interface FormData {
 
 const initialFormData: FormData = {
   id: null,
-  run: '',
-  dv: '',
+  rut: '',
   nombre: '',
   apellidoPaterno: '',
   apellidoMaterno: '',
@@ -193,21 +178,33 @@ const initialFormData: FormData = {
   runAcompanante: '',
 };
 
+// Función para formatear RUT
+const formatearRut = (rut: string): string => {
+  const valor = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (valor.length < 2) return valor;
+  const dv = valor.slice(-1);
+  let cuerpo = valor.slice(0, -1);
+  cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${cuerpo}-${dv}`;
+};
+
 export default function AdministrativoPage() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [activeTab, setActiveTab] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null);
   const [madreExistente, setMadreExistente] = useState<Madre | null>(null);
 
-  // Manejar paciente encontrado
-  const handlePacienteEncontrado = (madre: Madre | null) => {
+  const handlePacienteEncontrado = (madre: Madre | null, rutBuscado?: string) => {
     if (madre) {
       setMadreExistente(madre);
       const nombrePartes = madre.nombre_completo?.split(' ') || [];
+      const rutFormateado = madre.rut ? formatearRut(madre.rut) : (rutBuscado ? formatearRut(rutBuscado) : '');
+      
       setFormData(prev => ({
         ...prev,
         id: madre.id || null,
+        rut: rutFormateado,
         nombre: nombrePartes[0] || '',
         apellidoPaterno: nombrePartes[1] || '',
         apellidoMaterno: nombrePartes.slice(2).join(' ') || '',
@@ -220,34 +217,23 @@ export default function AdministrativoPage() {
         direccion: madre.direccion || '',
         telefono: madre.telefono || '',
       }));
-      setMensaje({ tipo: 'success', texto: 'Paciente cargada. Puede editar los datos.' });
+      setMensaje({ tipo: 'success', texto: `✅ Paciente encontrada: ${madre.nombre_completo}` });
     } else {
       setMadreExistente(null);
-      setFormData(prev => ({
-        ...prev,
-        id: null,
-        nombre: '',
-        apellidoPaterno: '',
-        apellidoMaterno: '',
-        fechaNacimiento: '',
-        comuna: '',
-        cesfam: '',
-        nacionalidad: 'Chilena',
-        esMigrante: false,
-        puebloOriginario: false,
-        direccion: '',
-        telefono: '',
-      }));
+      const rutFormateado = rutBuscado ? formatearRut(rutBuscado) : '';
+      setFormData({ ...initialFormData, rut: rutFormateado });
+      if (rutBuscado) {
+        setMensaje({ tipo: 'info', texto: '📝 Paciente no encontrada. Complete los datos para registrarla.' });
+      }
     }
   };
 
-  // Manejar cambio de RUT
-  const handleRutChange = (run: string, dv: string) => {
-    setFormData(prev => ({ ...prev, run, dv }));
+  const handleRutChange = (rut: string) => {
+    const rutFormateado = formatearRut(rut);
+    setFormData(prev => ({ ...prev, rut: rutFormateado }));
     setMensaje(null);
   };
 
-  // Manejar cambios en el formulario
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -257,32 +243,34 @@ export default function AdministrativoPage() {
     }));
   };
 
-  // Cambiar pestaña (SIN enviar formulario)
+  const handleRutInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rutFormateado = formatearRut(e.target.value);
+    setFormData(prev => ({ ...prev, rut: rutFormateado }));
+  };
+
   const cambiarTab = (index: number) => {
     setActiveTab(index);
   };
 
-  // Enviar formulario (SOLO al hacer clic en Guardar)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validaciones básicas
-    if (!formData.run || !formData.dv) {
-      setMensaje({ tipo: 'error', texto: 'Debe buscar o ingresar un RUT válido' });
+    if (!formData.rut || formData.rut.length < 3) {
+      setMensaje({ tipo: 'error', texto: '❌ Debe ingresar un RUT válido' });
       return;
     }
     if (!formData.nombre || !formData.apellidoPaterno) {
-      setMensaje({ tipo: 'error', texto: 'Nombre y apellido paterno son requeridos' });
+      setMensaje({ tipo: 'error', texto: '❌ Nombre y apellido paterno son requeridos' });
       setActiveTab(0);
       return;
     }
     if (!formData.fechaNacimiento) {
-      setMensaje({ tipo: 'error', texto: 'Fecha de nacimiento es requerida' });
+      setMensaje({ tipo: 'error', texto: '❌ Fecha de nacimiento es requerida' });
       setActiveTab(0);
       return;
     }
     if (!formData.comuna) {
-      setMensaje({ tipo: 'error', texto: 'Comuna es requerida' });
+      setMensaje({ tipo: 'error', texto: '❌ Comuna es requerida' });
       setActiveTab(1);
       return;
     }
@@ -291,10 +279,8 @@ export default function AdministrativoPage() {
     setMensaje(null);
 
     try {
-      const rutCompleto = `${formData.run}-${formData.dv}`;
-      
       const madreData = {
-        rut: rutCompleto,
+        rut: formData.rut.replace(/\./g, ''),
         nombre_completo: `${formData.nombre} ${formData.apellidoPaterno} ${formData.apellidoMaterno}`.trim(),
         fecha_nacimiento: formData.fechaNacimiento,
         comuna: formData.comuna,
@@ -310,34 +296,26 @@ export default function AdministrativoPage() {
         await madresApi.update(madreExistente.id, madreData);
         setMensaje({ tipo: 'success', texto: '✅ Paciente actualizada correctamente' });
       } else {
-        await madresApi.create(madreData);
+        const nuevaMadre = await madresApi.create(madreData);
+        setMadreExistente(nuevaMadre);
+        setFormData(prev => ({ ...prev, id: nuevaMadre.id || null }));
         setMensaje({ tipo: 'success', texto: '✅ Paciente registrada correctamente' });
       }
-
-      // Limpiar formulario después de guardar
-      setTimeout(() => {
-        setFormData(initialFormData);
-        setMadreExistente(null);
-        setActiveTab(0);
-        setMensaje(null);
-      }, 2000);
-
     } catch (error: unknown) {
       console.error('Error al guardar:', error);
-      const err = error as { response?: { data?: { rut?: string[]; detail?: string } } };
+      const err = error as { response?: { data?: { rut?: string[]; detail?: string; non_field_errors?: string[] } } };
       if (err.response?.data?.rut) {
-        setMensaje({ tipo: 'error', texto: 'Error: ' + err.response.data.rut[0] });
+        setMensaje({ tipo: 'error', texto: '❌ ' + err.response.data.rut[0] });
       } else if (err.response?.data?.detail) {
-        setMensaje({ tipo: 'error', texto: 'Error: ' + err.response.data.detail });
+        setMensaje({ tipo: 'error', texto: '❌ ' + err.response.data.detail });
       } else {
-        setMensaje({ tipo: 'error', texto: 'Error al guardar. Verifique la conexión con el servidor.' });
+        setMensaje({ tipo: 'error', texto: '❌ Error al guardar. Verifique la conexión.' });
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Limpiar formulario
   const limpiarFormulario = () => {
     setFormData(initialFormData);
     setMadreExistente(null);
@@ -352,26 +330,23 @@ export default function AdministrativoPage() {
       <div style={styles.content}>
         <h1 style={styles.title}>📋 Admisión de Pacientes</h1>
 
-        {/* Mensaje de estado */}
         {mensaje && (
           <div style={{
             ...styles.mensaje,
-            backgroundColor: mensaje.tipo === 'success' ? '#d4edda' : '#f8d7da',
-            color: mensaje.tipo === 'success' ? '#155724' : '#721c24',
-            borderColor: mensaje.tipo === 'success' ? '#c3e6cb' : '#f5c6cb',
+            backgroundColor: mensaje.tipo === 'success' ? '#d4edda' : mensaje.tipo === 'error' ? '#f8d7da' : '#cce5ff',
+            color: mensaje.tipo === 'success' ? '#155724' : mensaje.tipo === 'error' ? '#721c24' : '#004085',
+            borderColor: mensaje.tipo === 'success' ? '#c3e6cb' : mensaje.tipo === 'error' ? '#f5c6cb' : '#b8daff',
           }}>
             {mensaje.texto}
           </div>
         )}
 
-        {/* Buscador de paciente */}
         <BuscarPaciente
           onPacienteEncontrado={handlePacienteEncontrado}
           onRutChange={handleRutChange}
         />
 
         <div style={styles.formContainer}>
-          {/* Tabs */}
           <div style={styles.tabs}>
             {tabs.map((tab, index) => (
               <button
@@ -388,11 +363,9 @@ export default function AdministrativoPage() {
             ))}
           </div>
 
-          {/* Formulario - onSubmit solo se dispara con el botón submit */}
           <form onSubmit={handleSubmit}>
             <div style={styles.tabContent}>
               
-              {/* Tab 0: Datos Personales */}
               {activeTab === 0 && (
                 <div style={styles.tabPane}>
                   <div style={styles.formGrid}>
@@ -400,66 +373,36 @@ export default function AdministrativoPage() {
                       <label style={styles.label}>RUN *</label>
                       <input
                         type="text"
-                        value={formData.run && formData.dv ? `${formData.run}-${formData.dv}` : ''}
-                        disabled
-                        style={{ ...styles.input, backgroundColor: '#f0f0f0' }}
-                        placeholder="Busque por RUT arriba"
+                        value={formData.rut}
+                        onChange={handleRutInputChange}
+                        style={styles.input}
+                        placeholder="12.345.678-9"
+                        maxLength={12}
                       />
+                      <small style={styles.helpText}>
+                        {madreExistente ? '✅ Paciente existente' : formData.rut ? '📝 Nueva paciente' : 'Busque o ingrese RUT'}
+                      </small>
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Nombre *</label>
-                      <input 
-                        type="text" 
-                        name="nombre" 
-                        value={formData.nombre} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                        placeholder="Nombre"
-                      />
+                      <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} style={styles.input} placeholder="Nombre" />
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Apellido Paterno *</label>
-                      <input 
-                        type="text" 
-                        name="apellidoPaterno" 
-                        value={formData.apellidoPaterno} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                        placeholder="Apellido paterno"
-                      />
+                      <input type="text" name="apellidoPaterno" value={formData.apellidoPaterno} onChange={handleChange} style={styles.input} placeholder="Apellido paterno" />
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Apellido Materno</label>
-                      <input 
-                        type="text" 
-                        name="apellidoMaterno" 
-                        value={formData.apellidoMaterno} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                        placeholder="Apellido materno"
-                      />
+                      <input type="text" name="apellidoMaterno" value={formData.apellidoMaterno} onChange={handleChange} style={styles.input} placeholder="Apellido materno" />
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Fecha de Nacimiento *</label>
-                      <input 
-                        type="date" 
-                        name="fechaNacimiento" 
-                        value={formData.fechaNacimiento} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                      />
+                      <input type="date" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} style={styles.input} />
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Nacionalidad</label>
-                      <select 
-                        name="nacionalidad" 
-                        value={formData.nacionalidad} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
-                        {NACIONALIDADES.map(n => (
-                          <option key={n} value={n}>{n}</option>
-                        ))}
+                      <select name="nacionalidad" value={formData.nacionalidad} onChange={handleChange} style={styles.input}>
+                        {NACIONALIDADES.map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
                   </div>
@@ -467,53 +410,23 @@ export default function AdministrativoPage() {
                   <h3 style={styles.sectionTitle}>Condiciones Especiales</h3>
                   <div style={styles.checkboxGrid}>
                     <label style={styles.checkboxLabel}>
-                      <input 
-                        type="checkbox" 
-                        name="esMigrante" 
-                        checked={formData.esMigrante} 
-                        onChange={handleChange} 
-                        style={styles.checkbox} 
-                      />
+                      <input type="checkbox" name="esMigrante" checked={formData.esMigrante} onChange={handleChange} style={styles.checkbox} />
                       Migrante
                     </label>
                     <label style={styles.checkboxLabel}>
-                      <input 
-                        type="checkbox" 
-                        name="puebloOriginario" 
-                        checked={formData.puebloOriginario} 
-                        onChange={handleChange} 
-                        style={styles.checkbox} 
-                      />
+                      <input type="checkbox" name="puebloOriginario" checked={formData.puebloOriginario} onChange={handleChange} style={styles.checkbox} />
                       Pueblo Originario
                     </label>
                     <label style={styles.checkboxLabel}>
-                      <input 
-                        type="checkbox" 
-                        name="privadaLibertad" 
-                        checked={formData.privadaLibertad} 
-                        onChange={handleChange} 
-                        style={styles.checkbox} 
-                      />
+                      <input type="checkbox" name="privadaLibertad" checked={formData.privadaLibertad} onChange={handleChange} style={styles.checkbox} />
                       Privada de Libertad
                     </label>
                     <label style={styles.checkboxLabel}>
-                      <input 
-                        type="checkbox" 
-                        name="transMasculino" 
-                        checked={formData.transMasculino} 
-                        onChange={handleChange} 
-                        style={styles.checkbox} 
-                      />
+                      <input type="checkbox" name="transMasculino" checked={formData.transMasculino} onChange={handleChange} style={styles.checkbox} />
                       Trans Masculino
                     </label>
                     <label style={styles.checkboxLabel}>
-                      <input 
-                        type="checkbox" 
-                        name="discapacidad" 
-                        checked={formData.discapacidad} 
-                        onChange={handleChange} 
-                        style={styles.checkbox} 
-                      />
+                      <input type="checkbox" name="discapacidad" checked={formData.discapacidad} onChange={handleChange} style={styles.checkbox} />
                       Discapacidad
                     </label>
                   </div>
@@ -521,16 +434,9 @@ export default function AdministrativoPage() {
                   {formData.puebloOriginario && (
                     <div style={styles.conditionalSection}>
                       <label style={styles.label}>Tipo de Pueblo Originario</label>
-                      <select 
-                        name="puebloOriginarioTipo" 
-                        value={formData.puebloOriginarioTipo} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
+                      <select name="puebloOriginarioTipo" value={formData.puebloOriginarioTipo} onChange={handleChange} style={styles.input}>
                         <option value="">Seleccione...</option>
-                        {PUEBLOS_ORIGINARIOS.map(p => (
-                          <option key={p} value={p}>{p}</option>
-                        ))}
+                        {PUEBLOS_ORIGINARIOS.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                   )}
@@ -538,12 +444,7 @@ export default function AdministrativoPage() {
                   {formData.discapacidad && (
                     <div style={styles.conditionalSection}>
                       <label style={styles.label}>Tipo de Discapacidad</label>
-                      <select 
-                        name="discapacidadTipo" 
-                        value={formData.discapacidadTipo} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
+                      <select name="discapacidadTipo" value={formData.discapacidadTipo} onChange={handleChange} style={styles.input}>
                         <option value="">Seleccione...</option>
                         <option value="Física">Física</option>
                         <option value="Visual">Visual</option>
@@ -557,97 +458,54 @@ export default function AdministrativoPage() {
                 </div>
               )}
 
-              {/* Tab 1: Contacto y Ubicación */}
               {activeTab === 1 && (
                 <div style={styles.tabPane}>
                   <div style={styles.formGrid}>
                     <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
                       <label style={styles.label}>Dirección</label>
-                      <input 
-                        type="text" 
-                        name="direccion" 
-                        value={formData.direccion} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                        placeholder="Calle, número, depto/casa"
-                      />
+                      <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} style={styles.input} placeholder="Calle, número, depto/casa" />
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Región</label>
-                      <select 
-                        name="region" 
-                        value={formData.region} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
-                        {REGIONES.map(r => (
-                          <option key={r} value={r}>{r}</option>
-                        ))}
+                      <select name="region" value={formData.region} onChange={handleChange} style={styles.input}>
+                        {REGIONES.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Ciudad</label>
-                      <input 
-                        type="text" 
-                        name="ciudad" 
-                        value={formData.ciudad} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                        placeholder="Ciudad"
-                      />
+                      <input type="text" name="ciudad" value={formData.ciudad} onChange={handleChange} style={styles.input} placeholder="Ciudad" />
+                      <small style={styles.helpTextWarning}>⚠️ No se guarda en BD</small>
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Comuna *</label>
-                      <select 
-                        name="comuna" 
-                        value={formData.comuna} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
+                      <select name="comuna" value={formData.comuna} onChange={handleChange} style={styles.input}>
                         <option value="">Seleccione...</option>
-                        {COMUNAS.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
+                        {COMUNAS.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Teléfono</label>
-                      <input 
-                        type="tel" 
-                        name="telefono" 
-                        value={formData.telefono} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                        placeholder="+56 9 1234 5678"
-                      />
+                      <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} style={styles.input} placeholder="+56 9 1234 5678" />
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Correo Electrónico</label>
-                      <input 
-                        type="email" 
-                        name="correo" 
-                        value={formData.correo} 
-                        onChange={handleChange} 
-                        style={styles.input} 
-                        placeholder="correo@ejemplo.com"
-                      />
+                      <input type="email" name="correo" value={formData.correo} onChange={handleChange} style={styles.input} placeholder="correo@ejemplo.com" />
+                      <small style={styles.helpTextWarning}>⚠️ No se guarda en BD</small>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Tab 2: Datos de Ingreso */}
               {activeTab === 2 && (
                 <div style={styles.tabPane}>
+                  <div style={styles.warningBox}>
+                    ⚠️ <strong>Nota:</strong> Algunos datos de esta sección son informativos. Contacte al administrador para agregar campos faltantes al modelo.
+                  </div>
+                  
                   <div style={styles.formGrid}>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Tipo Paciente</label>
-                      <select 
-                        name="tipoPaciente" 
-                        value={formData.tipoPaciente} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
+                      <select name="tipoPaciente" value={formData.tipoPaciente} onChange={handleChange} style={styles.input}>
                         <option value="">Seleccione...</option>
                         <option value="GES">GES</option>
                         <option value="No GES">No GES</option>
@@ -656,124 +514,49 @@ export default function AdministrativoPage() {
                         <option value="FONASA C">FONASA C</option>
                         <option value="FONASA D">FONASA D</option>
                         <option value="ISAPRE">ISAPRE</option>
-                        <option value="PRAIS">PRAIS</option>
                       </select>
                     </div>
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Origen Ingreso</label>
-                      <select 
-                        name="origenIngreso" 
-                        value={formData.origenIngreso} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
+                      <select name="origenIngreso" value={formData.origenIngreso} onChange={handleChange} style={styles.input}>
                         <option value="">Seleccione...</option>
                         <option value="Urgencia">Urgencia</option>
                         <option value="Derivación APS">Derivación APS</option>
                         <option value="Derivación Hospital">Derivación Hospital</option>
                         <option value="Programado">Programado</option>
-                        <option value="Espontáneo">Espontáneo</option>
                       </select>
                     </div>
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>CESFAM Origen</label>
-                      <select 
-                        name="cesfam" 
-                        value={formData.cesfam} 
-                        onChange={handleChange} 
-                        style={styles.input}
-                      >
+                      <label style={styles.label}>CESFAM Origen ✅</label>
+                      <select name="cesfam" value={formData.cesfam} onChange={handleChange} style={styles.input}>
                         <option value="">Seleccione...</option>
-                        {CESFAM_LIST.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
+                        {CESFAM_LIST.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                   </div>
 
                   <h3 style={styles.sectionTitle}>Plan de Parto</h3>
                   <div style={styles.radioGroup}>
-                    <label style={styles.radioLabel}>
-                      <input 
-                        type="radio" 
-                        name="planParto" 
-                        value="si" 
-                        checked={formData.planParto === 'si'} 
-                        onChange={handleChange} 
-                      /> 
-                      Sí
-                    </label>
-                    <label style={styles.radioLabel}>
-                      <input 
-                        type="radio" 
-                        name="planParto" 
-                        value="no" 
-                        checked={formData.planParto === 'no'} 
-                        onChange={handleChange} 
-                      /> 
-                      No
-                    </label>
+                    <label style={styles.radioLabel}><input type="radio" name="planParto" value="si" checked={formData.planParto === 'si'} onChange={handleChange} /> Sí</label>
+                    <label style={styles.radioLabel}><input type="radio" name="planParto" value="no" checked={formData.planParto === 'no'} onChange={handleChange} /> No</label>
                   </div>
 
                   <h3 style={styles.sectionTitle}>Visita Guiada</h3>
                   <div style={styles.radioGroup}>
-                    <label style={styles.radioLabel}>
-                      <input 
-                        type="radio" 
-                        name="visitaGuiada" 
-                        value="si" 
-                        checked={formData.visitaGuiada === 'si'} 
-                        onChange={handleChange} 
-                      /> 
-                      Sí
-                    </label>
-                    <label style={styles.radioLabel}>
-                      <input 
-                        type="radio" 
-                        name="visitaGuiada" 
-                        value="no" 
-                        checked={formData.visitaGuiada === 'no'} 
-                        onChange={handleChange} 
-                      /> 
-                      No
-                    </label>
+                    <label style={styles.radioLabel}><input type="radio" name="visitaGuiada" value="si" checked={formData.visitaGuiada === 'si'} onChange={handleChange} /> Sí</label>
+                    <label style={styles.radioLabel}><input type="radio" name="visitaGuiada" value="no" checked={formData.visitaGuiada === 'no'} onChange={handleChange} /> No</label>
                   </div>
 
                   <h3 style={styles.sectionTitle}>Acompañamiento Ley 20.584</h3>
                   <div style={styles.radioGroup}>
-                    <label style={styles.radioLabel}>
-                      <input 
-                        type="radio" 
-                        name="acompanamiento" 
-                        value="si" 
-                        checked={formData.acompanamiento === 'si'} 
-                        onChange={handleChange} 
-                      /> 
-                      Sí
-                    </label>
-                    <label style={styles.radioLabel}>
-                      <input 
-                        type="radio" 
-                        name="acompanamiento" 
-                        value="no" 
-                        checked={formData.acompanamiento === 'no'} 
-                        onChange={handleChange} 
-                      /> 
-                      No
-                    </label>
+                    <label style={styles.radioLabel}><input type="radio" name="acompanamiento" value="si" checked={formData.acompanamiento === 'si'} onChange={handleChange} /> Sí</label>
+                    <label style={styles.radioLabel}><input type="radio" name="acompanamiento" value="no" checked={formData.acompanamiento === 'no'} onChange={handleChange} /> No</label>
                   </div>
 
                   {formData.acompanamiento === 'no' && (
                     <div style={styles.conditionalSection}>
                       <label style={styles.label}>Motivo de No Acompañamiento</label>
-                      <textarea 
-                        name="motivoNoAcompanamiento" 
-                        value={formData.motivoNoAcompanamiento} 
-                        onChange={handleChange} 
-                        style={styles.textarea} 
-                        rows={2} 
-                        placeholder="Indique el motivo..."
-                      />
+                      <textarea name="motivoNoAcompanamiento" value={formData.motivoNoAcompanamiento} onChange={handleChange} style={styles.textarea} rows={2} placeholder="Indique el motivo..." />
                     </div>
                   )}
 
@@ -783,12 +566,7 @@ export default function AdministrativoPage() {
                       <div style={styles.formGrid}>
                         <div style={styles.formGroup}>
                           <label style={styles.label}>Parentesco</label>
-                          <select 
-                            name="parentescoAcompanante" 
-                            value={formData.parentescoAcompanante} 
-                            onChange={handleChange} 
-                            style={styles.input}
-                          >
+                          <select name="parentescoAcompanante" value={formData.parentescoAcompanante} onChange={handleChange} style={styles.input}>
                             <option value="">Seleccione...</option>
                             <option value="Pareja">Pareja</option>
                             <option value="Madre">Madre</option>
@@ -801,25 +579,11 @@ export default function AdministrativoPage() {
                         </div>
                         <div style={styles.formGroup}>
                           <label style={styles.label}>Nombre Acompañante</label>
-                          <input 
-                            type="text" 
-                            name="nombreAcompanante" 
-                            value={formData.nombreAcompanante} 
-                            onChange={handleChange} 
-                            style={styles.input} 
-                            placeholder="Nombre completo"
-                          />
+                          <input type="text" name="nombreAcompanante" value={formData.nombreAcompanante} onChange={handleChange} style={styles.input} placeholder="Nombre completo" />
                         </div>
                         <div style={styles.formGroup}>
                           <label style={styles.label}>RUN Acompañante</label>
-                          <input 
-                            type="text" 
-                            name="runAcompanante" 
-                            value={formData.runAcompanante} 
-                            onChange={handleChange} 
-                            style={styles.input} 
-                            placeholder="12.345.678-9"
-                          />
+                          <input type="text" name="runAcompanante" value={formData.runAcompanante} onChange={handleChange} style={styles.input} placeholder="12.345.678-9" />
                         </div>
                       </div>
                     </div>
@@ -828,54 +592,20 @@ export default function AdministrativoPage() {
               )}
             </div>
 
-            {/* Botones de navegación y acción */}
             <div style={styles.formActions}>
               <div style={styles.navButtons}>
-                <button 
-                  type="button" 
-                  onClick={() => cambiarTab(Math.max(0, activeTab - 1))} 
-                  disabled={activeTab === 0} 
-                  style={{
-                    ...styles.btnSecondary,
-                    opacity: activeTab === 0 ? 0.5 : 1,
-                    cursor: activeTab === 0 ? 'not-allowed' : 'pointer',
-                  }}
-                >
+                <button type="button" onClick={() => cambiarTab(Math.max(0, activeTab - 1))} disabled={activeTab === 0} style={{ ...styles.btnSecondary, opacity: activeTab === 0 ? 0.5 : 1, cursor: activeTab === 0 ? 'not-allowed' : 'pointer' }}>
                   ← Anterior
                 </button>
-                
                 {activeTab < tabs.length - 1 && (
-                  <button 
-                    type="button" 
-                    onClick={() => cambiarTab(activeTab + 1)} 
-                    style={styles.btnPrimary}
-                  >
-                    Siguiente →
-                  </button>
+                  <button type="button" onClick={() => cambiarTab(activeTab + 1)} style={styles.btnPrimary}>Siguiente →</button>
                 )}
               </div>
-
               <div style={styles.actionButtons}>
-                <button 
-                  type="button" 
-                  onClick={limpiarFormulario} 
-                  style={styles.btnSecondary}
-                >
-                  🗑️ Limpiar
+                <button type="button" onClick={limpiarFormulario} style={styles.btnSecondary}>🗑️ Limpiar</button>
+                <button type="submit" disabled={isLoading} style={{ ...styles.btnSuccess, opacity: isLoading ? 0.7 : 1 }}>
+                  {isLoading ? '⏳ Guardando...' : (madreExistente ? '💾 Actualizar' : '💾 Guardar')}
                 </button>
-                
-                {activeTab === tabs.length - 1 && (
-                  <button 
-                    type="submit" 
-                    disabled={isLoading} 
-                    style={{
-                      ...styles.btnSuccess,
-                      opacity: isLoading ? 0.7 : 1,
-                    }}
-                  >
-                    {isLoading ? '⏳ Guardando...' : (madreExistente ? '💾 Actualizar Paciente' : '💾 Guardar Paciente')}
-                  </button>
-                )}
               </div>
             </div>
           </form>
@@ -886,193 +616,36 @@ export default function AdministrativoPage() {
 }
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    fontFamily: "'Poppins', sans-serif",
-    minHeight: 'calc(100vh - 60px)',
-    padding: '20px',
-  },
-  content: {
-    maxWidth: '1000px',
-    margin: '0 auto',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#1a365d',
-    marginBottom: '20px',
-  },
-  mensaje: {
-    padding: '12px 20px',
-    borderRadius: '8px',
-    marginBottom: '20px',
-    border: '1px solid',
-    fontSize: '14px',
-  },
-  formContainer: {
-    backgroundColor: '#e8f3ff',
-    borderRadius: '12px',
-    boxShadow: '0 5px 20px rgba(0, 123, 255, 0.15)',
-    overflow: 'hidden',
-  },
-  tabs: {
-    display: 'flex',
-    borderBottom: '2px solid #007bff',
-  },
-  tabButton: {
-    flex: 1,
-    padding: '15px',
-    border: 'none',
-    backgroundColor: '#d6eaff',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 500,
-    color: '#495057',
-    fontFamily: "'Poppins', sans-serif",
-    transition: 'all 0.2s',
-  },
-  tabButtonActive: {
-    backgroundColor: '#007bff',
-    color: 'white',
-  },
-  tabContent: {
-    padding: '25px',
-  },
+  container: { fontFamily: "'Poppins', sans-serif", minHeight: 'calc(100vh - 60px)', padding: '20px' },
+  content: { maxWidth: '1000px', margin: '0 auto' },
+  title: { fontSize: '24px', fontWeight: 700, color: '#1a365d', marginBottom: '20px' },
+  mensaje: { padding: '12px 20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid', fontSize: '14px' },
+  formContainer: { backgroundColor: '#e8f3ff', borderRadius: '12px', boxShadow: '0 5px 20px rgba(0, 123, 255, 0.15)', overflow: 'hidden' },
+  tabs: { display: 'flex', borderBottom: '2px solid #007bff' },
+  tabButton: { flex: 1, padding: '15px', border: 'none', backgroundColor: '#d6eaff', cursor: 'pointer', fontSize: '14px', fontWeight: 500, color: '#495057', fontFamily: "'Poppins', sans-serif", transition: 'all 0.2s' },
+  tabButtonActive: { backgroundColor: '#007bff', color: 'white' },
+  tabContent: { padding: '25px' },
   tabPane: {},
-  formGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '15px',
-    marginBottom: '20px',
-  },
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '20px' },
   formGroup: {},
-  label: {
-    display: 'block',
-    marginBottom: '5px',
-    fontSize: '13px',
-    fontWeight: 500,
-    color: '#495057',
-  },
-  input: {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #c1d9e7',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontFamily: "'Poppins', sans-serif",
-    boxSizing: 'border-box',
-    backgroundColor: 'white',
-  },
-  textarea: {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #c1d9e7',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontFamily: "'Poppins', sans-serif",
-    boxSizing: 'border-box',
-    backgroundColor: 'white',
-    resize: 'vertical',
-  },
-  sectionTitle: {
-    fontSize: '15px',
-    fontWeight: 600,
-    color: '#1a365d',
-    marginBottom: '15px',
-    marginTop: '20px',
-    paddingBottom: '8px',
-    borderBottom: '1px solid #c1d9e7',
-  },
-  subTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: '#495057',
-    marginBottom: '15px',
-  },
-  checkboxGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '10px',
-    marginBottom: '15px',
-  },
-  checkboxLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '14px',
-    color: '#495057',
-    cursor: 'pointer',
-  },
-  checkbox: {
-    width: '18px',
-    height: '18px',
-    cursor: 'pointer',
-  },
-  radioGroup: {
-    display: 'flex',
-    gap: '20px',
-    marginBottom: '15px',
-  },
-  radioLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '14px',
-    color: '#495057',
-    cursor: 'pointer',
-  },
-  conditionalSection: {
-    backgroundColor: '#d6eaff',
-    padding: '15px',
-    borderRadius: '8px',
-    marginTop: '15px',
-    border: '1px dashed #007bff',
-  },
-  formActions: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '20px 25px',
-    borderTop: '1px solid #c1d9e7',
-    backgroundColor: '#d6eaff',
-  },
-  navButtons: {
-    display: 'flex',
-    gap: '10px',
-  },
-  actionButtons: {
-    display: 'flex',
-    gap: '10px',
-  },
-  btnSecondary: {
-    padding: '12px 20px',
-    border: '1px solid #007bff',
-    borderRadius: '8px',
-    backgroundColor: 'white',
-    color: '#007bff',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: "'Poppins', sans-serif",
-  },
-  btnPrimary: {
-    padding: '12px 20px',
-    border: 'none',
-    borderRadius: '8px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: "'Poppins', sans-serif",
-  },
-  btnSuccess: {
-    padding: '12px 25px',
-    border: 'none',
-    borderRadius: '8px',
-    backgroundColor: '#28a745',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: "'Poppins', sans-serif",
-  },
+  label: { display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 500, color: '#495057' },
+  input: { width: '100%', padding: '10px 12px', border: '1px solid #c1d9e7', borderRadius: '8px', fontSize: '14px', fontFamily: "'Poppins', sans-serif", boxSizing: 'border-box', backgroundColor: 'white' },
+  textarea: { width: '100%', padding: '10px 12px', border: '1px solid #c1d9e7', borderRadius: '8px', fontSize: '14px', fontFamily: "'Poppins', sans-serif", boxSizing: 'border-box', backgroundColor: 'white', resize: 'vertical' },
+  helpText: { display: 'block', marginTop: '4px', fontSize: '11px', color: '#6c757d' },
+  helpTextWarning: { display: 'block', marginTop: '4px', fontSize: '11px', color: '#856404' },
+  warningBox: { backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px', padding: '12px 15px', marginBottom: '20px', fontSize: '13px', color: '#856404' },
+  sectionTitle: { fontSize: '15px', fontWeight: 600, color: '#1a365d', marginBottom: '15px', marginTop: '20px', paddingBottom: '8px', borderBottom: '1px solid #c1d9e7' },
+  subTitle: { fontSize: '14px', fontWeight: 600, color: '#495057', marginBottom: '15px' },
+  checkboxGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '15px' },
+  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#495057', cursor: 'pointer' },
+  checkbox: { width: '18px', height: '18px', cursor: 'pointer' },
+  radioGroup: { display: 'flex', gap: '20px', marginBottom: '15px' },
+  radioLabel: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#495057', cursor: 'pointer' },
+  conditionalSection: { backgroundColor: '#d6eaff', padding: '15px', borderRadius: '8px', marginTop: '15px', border: '1px dashed #007bff' },
+  formActions: { display: 'flex', justifyContent: 'space-between', padding: '20px 25px', borderTop: '1px solid #c1d9e7', backgroundColor: '#d6eaff' },
+  navButtons: { display: 'flex', gap: '10px' },
+  actionButtons: { display: 'flex', gap: '10px' },
+  btnSecondary: { padding: '12px 20px', border: '1px solid #007bff', borderRadius: '8px', backgroundColor: 'white', color: '#007bff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Poppins', sans-serif" },
+  btnPrimary: { padding: '12px 20px', border: 'none', borderRadius: '8px', backgroundColor: '#007bff', color: 'white', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Poppins', sans-serif" },
+  btnSuccess: { padding: '12px 25px', border: 'none', borderRadius: '8px', backgroundColor: '#28a745', color: 'white', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Poppins', sans-serif" },
 };

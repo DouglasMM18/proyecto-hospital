@@ -7,11 +7,16 @@ from django.db.models import Count, Q
 from xhtml2pdf import pisa
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.contrib.auth.models import User
 
 from .models import Madre, Parto, RecienNacido, LogActividad, AltaMedica
-from .serializers import *
+from .serializers import (
+    MadreSerializer, PartoSerializer, RecienNacidoSerializer,
+    LogActividadSerializer, AltaMedicaSerializer, UserSerializer,
+    MyTokenObtainPairSerializer
+)
 from .permissions import EsAdministradorAdmision, EsMatrona, EsEquipoClinico, EsSupervisor
 
 # --- HELPER DE LOGS ---
@@ -50,47 +55,78 @@ class MadreViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_permissions(self):
-        # LOGICA SIMPLIFICADA (Propuesta de Andrés)
         if self.action == 'create':
-            # Solo Admisión crea la ficha inicial
             return [EsAdministradorAdmision()]
         elif self.action in ['list', 'retrieve']:
-            # Equipo clínico (incluye ahora a Admin) puede ver/buscar
             return [EsEquipoClinico()]
-        else:
-            # Solo Matrona puede editar/borrar datos sensibles
+        elif self.action in ['update', 'partial_update']:
+            return [EsAdministradorAdmision()]
+        else:  # destroy
             return [EsMatrona()]
 
     def perform_create(self, serializer):
         ins = serializer.save()
         registrar_log(self.request, 'CREAR', 'MADRE', f"ID: {ins.id}")
 
+    def perform_update(self, serializer):
+        ins = serializer.save()
+        registrar_log(self.request, 'EDITAR', 'MADRE', f"ID: {ins.id}")
+
 class PartoViewSet(viewsets.ModelViewSet):
     queryset = Parto.objects.all().order_by('-fecha')
     serializer_class = PartoSerializer
     
     def get_permissions(self):
-        if self.action == 'create': 
+        # Equipo clínico puede crear y ver partos
+        # Matrona puede editar y eliminar
+        if self.action in ['create', 'list', 'retrieve']:
             return [EsEquipoClinico()]
-        return [(EsMatrona | EsEquipoClinico)()]
+        else:
+            return [EsMatrona()]
 
     def perform_create(self, serializer):
         ins = serializer.save()
         registrar_log(self.request, 'CREAR', 'PARTO', f"ID: {ins.id}")
 
+    def perform_update(self, serializer):
+        ins = serializer.save()
+        registrar_log(self.request, 'EDITAR', 'PARTO', f"ID: {ins.id}")
+
 class RecienNacidoViewSet(viewsets.ModelViewSet):
     queryset = RecienNacido.objects.all()
     serializer_class = RecienNacidoSerializer
+    
+    def get_permissions(self):
+        if self.action in ['create', 'list', 'retrieve']:
+            return [EsEquipoClinico()]
+        else:
+            return [EsMatrona()]
 
-# --- NUEVO: CRUD ALTAS ---
+    def perform_create(self, serializer):
+        ins = serializer.save()
+        registrar_log(self.request, 'CREAR', 'RECIEN_NACIDO', f"ID: {ins.id}")
+
+# --- CRUD ALTAS ---
 class AltaMedicaViewSet(viewsets.ModelViewSet):
     queryset = AltaMedica.objects.all()
     serializer_class = AltaMedicaSerializer
 
     def get_permissions(self):
-        if self.action == 'create': 
-            return [EsEquipoClinico()] # Enfermera solicita
-        return [(EsMatrona | EsSupervisor)()] # Jefe aprueba
+        if self.action == 'create':
+            return [EsEquipoClinico()]  # Enfermera solicita
+        elif self.action in ['update', 'partial_update']:
+            return [EsMatrona()]  # Solo Matrona/Supervisor autoriza
+        else:
+            return [EsEquipoClinico()]  # Ver listado
+
+    def create(self, request, *args, **kwargs):
+        print("=== DATOS RECIBIDOS EN ALTA ===")
+        print(request.data)
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print("=== ERRORES DE VALIDACION ===")
+            print(serializer.errors)
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(solicitado_por=self.request.user)
@@ -98,50 +134,68 @@ class AltaMedicaViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         ins = serializer.save(autorizado_por=self.request.user, fecha_autorizacion=timezone.now())
-        registrar_log(self.request, 'AUTORIZAR', 'ALTA', f"Estado: {ins.estado}")
+        registrar_log(self.request, 'ALTA', 'ALTA', f"Estado: {ins.estado}")
 
 class LogActividadViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = LogActividad.objects.all()
     serializer_class = LogActividadSerializer
-    permission_classes = [EsSupervisor | EsMatrona]
+    
+    def get_permissions(self):
+        return [EsMatrona()]  # Solo Matrona/Supervisor puede ver logs
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
-    permission_classes = [EsSupervisor | EsMatrona] 
+    
+    def get_permissions(self):
+        return [EsMatrona()]  # Solo Matrona/Supervisor puede ver usuarios
 
 # --- REPORTES ---
 
 @api_view(['GET'])
-@permission_classes([EsSupervisor | EsMatrona]) 
+@permission_classes([EsMatrona])
 def reporte_excel_completo(request):
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="Gestion_Partos.xlsx"'
-    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Partos"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Partos"
     ws.append(['ID', 'Fecha', 'Tipo', 'RUT Madre', 'Nombre Madre'])
     for p in Parto.objects.all():
-        ws.append([p.id, p.fecha, p.tipo_parto, p.madre.rut, p.madre.nombre_completo])
+        ws.append([p.id, str(p.fecha), p.tipo_parto, p.madre.rut, p.madre.nombre_completo])
     wb.save(response)
+    registrar_log(request, 'EXPORTAR', 'PARTO', "Excel completo")
     return response
 
 @api_view(['GET'])
-@permission_classes([EsSupervisor | EsMatrona]) 
+@permission_classes([EsMatrona])
 def reporte_pdf_rem(request):
     total = Parto.objects.count()
     cesareas = Parto.objects.filter(tipo_parto__icontains='CESAREA').count()
     normales = Parto.objects.filter(tipo_parto='EUTOCICO').count()
-    context = {'partos': Parto.objects.all()[:50], 'total_partos': total, 'total_cesareas': cesareas, 'total_normales': normales, 'fecha_generacion': timezone.now()}
+    context = {
+        'partos': Parto.objects.all()[:50],
+        'total_partos': total,
+        'total_cesareas': cesareas,
+        'total_normales': normales,
+        'fecha_generacion': timezone.now()
+    }
     template = get_template('reporte_pdf.html')
     html = template.render(context)
     response = HttpResponse(content_type='application/pdf')
     pisa.CreatePDF(html, dest=response)
+    registrar_log(request, 'EXPORTAR', 'PARTO', "PDF REM")
     return response
 
 @api_view(['GET'])
-@permission_classes([EsSupervisor | EsMatrona])
+@permission_classes([EsMatrona])
 def reporte_auditoria_pdf(request):
     registrar_log(request, 'EXPORTAR', 'LOGS', "PDF Forense")
-    context = {'logs': LogActividad.objects.all()[:200], 'fecha_generacion': timezone.now(), 'solicitante': request.user.username}
+    context = {
+        'logs': LogActividad.objects.all()[:200],
+        'fecha_generacion': timezone.now(),
+        'solicitante': request.user.username
+    }
     template = get_template('auditoria_pdf.html')
     html = template.render(context)
     response = HttpResponse(content_type='application/pdf')
@@ -150,7 +204,7 @@ def reporte_auditoria_pdf(request):
     return response
 
 @api_view(['GET'])
-@permission_classes([EsMatrona | EsSupervisor])
+@permission_classes([EsMatrona])
 def alta_medica_pdf(request, alta_id):
     try:
         alta = AltaMedica.objects.get(pk=alta_id)
@@ -162,8 +216,10 @@ def alta_medica_pdf(request, alta_id):
 
     registrar_log(request, 'EXPORTAR', 'ALTA', f"PDF Alta {alta.id}")
     context = {
-        'parto': alta.parto, 'tipo_alta': alta.tipo, 
-        'responsable': alta.autorizado_por.username, 'fecha_generacion': timezone.now()
+        'parto': alta.parto,
+        'tipo_alta': alta.tipo,
+        'responsable': alta.autorizado_por.username if alta.autorizado_por else 'N/A',
+        'fecha_generacion': timezone.now()
     }
     template = get_template('alta_medica.html')
     html = template.render(context)
