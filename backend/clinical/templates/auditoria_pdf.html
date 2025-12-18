@@ -1,51 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
     <style>
-        body { font-family: Courier, monospace; font-size: 10px; }
-        h1 { text-align: center; border-bottom: 1px solid black; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background-color: #ddd; text-align: left; padding: 5px; border: 1px solid #000; }
-        td { border: 1px solid #000; padding: 5px; }
-        .alert { color: red; font-weight: bold; }
+        @page {
+            size: letter;
+            margin: 1cm;
+        }
+        body { font-family: Helvetica, sans-serif; font-size: 10px; color: #333; }
+        
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #b30000; padding-bottom: 10px; }
+        .title { font-size: 18px; font-weight: bold; color: #b30000; }
+        .meta { font-size: 10px; color: #666; margin-top: 5px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #333; color: white; padding: 6px; font-size: 11px; text-align: left; }
+        td { border-bottom: 1px solid #ddd; padding: 5px; font-size: 9px; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        
+        .badge { padding: 2px 5px; border-radius: 3px; font-weight: bold; color: white; font-size: 8px; }
+        .rol-matrona { background-color: #9b59b6; }
+        .rol-medico { background-color: #2980b9; }
+        .rol-admin { background-color: #c0392b; }
+        .rol-ti { background-color: #27ae60; }
+        .rol-otro { background-color: #7f8c8d; }
+
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 8px; color: #999; border-top: 1px solid #ccc; padding-top: 5px; }
     </style>
 </head>
 <body>
-    <h1>REPORTE FORENSE DE TRAZABILIDAD DEL SISTEMA</h1>
-    <p><strong>Fecha de Emisión:</strong> {{ fecha_generacion }}</p>
-    <p><strong>Solicitante:</strong> {{ solicitante }}</p>
+    <div class="header">
+        <div class="title">REPORTE DE AUDITORÍA FORENSE</div>
+        <div class="meta">
+            Hospital Clínico Herminda Martín - Unidad de Neonatología<br>
+            Generado por: <strong>{{ solicitante }}</strong> | Fecha: {{ fecha_generacion|date:"d/m/Y H:i:s" }}
+        </div>
+    </div>
 
     <table>
         <thead>
             <tr>
-                <th>Fecha/Hora (UTC)</th>
-                <th>Usuario</th>
-                <th>Rol</th>
-                <th>IP Origen</th>
-                <th>Acción</th>
-                <th>Detalle del Evento</th>
+                <th width="20%">Fecha / Hora</th>
+                <th width="15%">Usuario</th>
+                <th width="10%">Rol</th>
+                <th width="10%">Acción</th>
+                <th width="10%">Módulo</th>
+                <th width="25%">Detalle</th>
+                <th width="10%">IP</th>
             </tr>
         </thead>
         <tbody>
             {% for log in logs %}
             <tr>
-                <td>{{ log.fecha|date:"Y-m-d H:i:s" }}</td>
-                <td>{{ log.usuario.username }}</td>
+                <td>{{ log.fecha|date:"d/m/Y H:i:s" }}</td>
+                <td><b>{{ log.usuario }}</b></td>
                 <td>
-                    {% if log.usuario.perfil %}
-                        {{ log.usuario.perfil.rol }}
-                    {% else %}
-                        SISTEMA/TI
-                    {% endif %}
+                    <span class="badge 
+                        {% if 'MATRONA' in log.rol|upper %}rol-matrona
+                        {% elif 'MEDICO' in log.rol|upper %}rol-medico
+                        {% elif 'TI' in log.rol|upper %}rol-ti
+                        {% else %}rol-otro{% endif %}">
+                        {{ log.rol }}
+                    </span>
                 </td>
+                <td>{{ log.accion }}</td>
+                <td>{{ log.modelo }}</td>
+                <td>{{ log.detalles|truncatechars:40 }}</td>
                 <td>{{ log.ip_address }}</td>
-                <td class="{% if log.accion == 'ELIMINAR' %}alert{% endif %}">{{ log.accion }}</td>
-                <td>{{ log.detalle }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px;">Sin registros de actividad reciente.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <br>
-    <p>Fin del reporte. Documento generado para fines de auditoría interna.</p>
+
+    <div class="footer">
+        CONFIDENCIAL: Este documento contiene trazabilidad de acciones sensibles del sistema.
+    </div>
 </body>
 </html>

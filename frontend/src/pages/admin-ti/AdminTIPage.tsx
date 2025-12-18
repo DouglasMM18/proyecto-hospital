@@ -8,10 +8,9 @@ interface Usuario {
   email: string;
   first_name: string;
   last_name: string;
-  rol: string; // Puede ser 'ADMINISTRADOR', 'MATRONA', etc.
+  rol: string; 
   is_active: boolean;
   last_login: string | null;
-  // date_joined a veces viene o no dependiendo del serializer, lo hacemos opcional
   date_joined?: string; 
 }
 
@@ -23,7 +22,6 @@ const rolesLabels: { [key: string]: string } = {
   ESPECIALISTA: 'Especialista',
   SUPERVISOR: 'Supervisor',
   TI: 'Administrador TI',
-  // Mantengo los antiguos por si acaso queda algún dato viejo
   administrativo: 'Administrativo',
   admin_ti: 'TI',
 };
@@ -31,7 +29,7 @@ const rolesLabels: { [key: string]: string } = {
 type ModalType = 'crear' | 'editar' | 'password' | null;
 
 export default function AdminTIPage() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]); // Inicia vacío
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +45,6 @@ export default function AdminTIPage() {
   const fetchUsuarios = async () => {
     try {
         setIsLoading(true);
-        // Llamamos al endpoint que habilitamos ayer
         const response = await api.get('/api/users/');
         setUsuarios(response.data);
     } catch (err) {
@@ -66,39 +63,17 @@ export default function AdminTIPage() {
     (u.email && u.email.toLowerCase().includes(busqueda.toLowerCase()))
   );
 
+  // --- FUNCIONES DE MODALES (Alerts para la Demo) ---
   const abrirModalCrear = () => {
-    // Como la API es ReadOnly, mostramos alerta
     alert("⚠️ Para la presentación: La creación de usuarios se realiza desde el Panel Django Admin por seguridad.");
-    // setUsuarioSeleccionado(null);
-    // setModalOpen('crear');
   };
 
   const abrirModalEditar = (usuario: Usuario) => {
     alert(`Editar usuario ${usuario.username}: Funcionalidad gestionada en Django Admin.`);
-    // setUsuarioSeleccionado(usuario);
-    // setModalOpen('editar');
   };
 
   const abrirModalPassword = (usuario: Usuario) => {
     alert("El cambio de contraseña requiere permisos de Superusuario.");
-    // setUsuarioSeleccionado(usuario);
-    // setModalOpen('password');
-  };
-
-  const cerrarModal = () => {
-    setModalOpen(null);
-    setUsuarioSeleccionado(null);
-  };
-
-  const toggleActivo = (id: number) => {
-    alert("Para desactivar usuarios, utilice el panel de administración.");
-    // Lógica visual anterior:
-    // setUsuarios(prev => prev.map(u => u.id === id ? { ...u, is_active: !u.is_active } : u));
-  };
-
-  // Estas funciones quedan pausadas porque la API es ReadOnly
-  const guardarUsuario = (usuario: Usuario) => {
-    cerrarModal();
   };
 
   const eliminarUsuario = (id: number) => {
@@ -107,11 +82,47 @@ export default function AdminTIPage() {
     }
   };
 
+  const cerrarModal = () => {
+    setModalOpen(null);
+    setUsuarioSeleccionado(null);
+  };
+
+  // --- LÓGICA DEL INTERRUPTOR ACTIVO/BLOQUEADO ---
+  const toggleActivo = async (usuario: Usuario) => {
+    // 1. Preguntar confirmación
+    const accion = usuario.is_active ? "BLOQUEAR" : "ACTIVAR";
+    if (!window.confirm(`¿Estás seguro que deseas ${accion} al usuario ${usuario.username}?`)) {
+        return;
+    }
+
+    try {
+        // 2. Llamada al Backend (Endpoint que creamos en views.py)
+        // Nota: Asumo que la ruta es /api/users/{id}/toggle_estado/ 
+        // Si usaste 'usuarios' en urls.py, cambia 'users' por 'usuarios' aquí.
+        const response = await api.post(`/api/users/${usuario.id}/toggle_estado/`);
+
+        // 3. Actualizar la tabla localmente sin recargar
+        setUsuarios(prev => prev.map(u => 
+            u.id === usuario.id 
+                ? { ...u, is_active: response.data.is_active } 
+                : u
+        ));
+
+        // Feedback visual simple (opcional, ya que el botón cambia de color)
+        // alert(`Usuario ${usuario.username} ${response.data.is_active ? 'Activado' : 'Bloqueado'} correctamente.`);
+
+    } catch (error) {
+        console.error("Error cambiando estado:", error);
+        alert("Error al intentar cambiar el estado. Revisa la consola o permisos.");
+    }
+  };
+
+
   // Función auxiliar para colores de badges
   const getRolColor = (rol: string) => {
       const r = rol?.toUpperCase();
       if (r === 'ADMINISTRADOR') return '#6f42c1'; // Morado
-      if (r === 'MATRONA') return '#e83e8c';       // Rosa
+      if (r === 'MATRONA') return '#e83e8c';      // Rosa
       if (r === 'ENFERMERA') return '#007bff';     // Azul
       if (r === 'TI') return '#20c997';            // Verde
       if (r === 'SUPERVISOR') return '#fd7e14';    // Naranja
@@ -124,6 +135,10 @@ export default function AdminTIPage() {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
+
+  // Funciones dummy para TypeScript (ya que no usamos el modal ahora)
+  const guardarUsuario = (usuario: Usuario) => cerrarModal();
+
 
   return (
     <div style={styles.container}>
@@ -165,7 +180,7 @@ export default function AdminTIPage() {
                 <th style={styles.th}>Nombre Completo</th>
                 <th style={styles.th}>Email</th>
                 <th style={styles.th}>Rol (Perfil)</th>
-                <th style={styles.th}>Estado</th>
+                <th style={styles.th}>Estado (Click para cambiar)</th>
                 <th style={styles.th}>Último Acceso</th>
                 <th style={styles.th}>Acciones</th>
               </tr>
@@ -187,18 +202,27 @@ export default function AdminTIPage() {
                       {rolesLabels[usuario.rol] || usuario.rol}
                     </span>
                   </td>
+                  
+                  {/* --- AQUÍ ESTÁ EL BOTÓN INTELIGENTE --- */}
                   <td style={styles.td}>
-                    <span
-                      onClick={() => toggleActivo(usuario.id)}
+                    <button
+                      onClick={() => toggleActivo(usuario)}
+                      title={usuario.is_active ? "Click para Bloquear" : "Click para Activar"}
                       style={{
-                        ...styles.estadoBadge,
+                        ...styles.btnEstado, // Usamos el estilo base de botón
                         backgroundColor: usuario.is_active ? '#28a745' : '#dc3545',
+                        // Efectos visuales para que parezca clickeable
                         cursor: 'pointer',
+                        transform: 'scale(1)',
+                        transition: 'all 0.1s ease',
                       }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      {usuario.is_active ? 'Activo' : 'Bloqueado'}
-                    </span>
+                      {usuario.is_active ? '✅ Activo' : '⛔ Bloqueado'}
+                    </button>
                   </td>
+
                   <td style={styles.td}>
                     {formatDate(usuario.last_login)}
                   </td>
@@ -261,7 +285,7 @@ export default function AdminTIPage() {
         </div>
       </div>
 
-      {/* Modal (Lo mantenemos renderizado condicionalmente por si quieres activarlo a futuro) */}
+      {/* Modal - Lo mantenemos oculto */}
       {modalOpen && (
         <ModalUsuario
           tipo={modalOpen}
@@ -274,7 +298,7 @@ export default function AdminTIPage() {
   );
 }
 
-// Componente Modal (Sin cambios lógicos mayores, solo tipos)
+// Componente Modal (Sin cambios)
 interface ModalProps {
   tipo: ModalType;
   usuario: Usuario | null;
@@ -282,19 +306,17 @@ interface ModalProps {
   onSave: (usuario: Usuario) => void;
 }
 
-function ModalUsuario({ tipo, usuario, onClose, onSave }: ModalProps) {
-  // Mantenemos el componente visualmente por si se necesita a futuro
-  // ... (Lógica de formulario igual que antes) ...
-  return null; // Lo oculto por ahora ya que usamos alerts
+function ModalUsuario({tipo, usuario, onClose, onSave}: ModalProps) {
+  return null; 
 }
 
-// Estilos principales (TUS ESTILOS ORIGINALES)
+// Estilos principales
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
   fontFamily: "'Poppins', sans-serif",
   minHeight: 'calc(100vh - 60px)',
   padding: '20px',
-},
+ },
   content: {
     maxWidth: '1200px',
     margin: '0 auto',
@@ -359,7 +381,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   borderRadius: '12px',
   boxShadow: '0 2px 10px rgba(0, 123, 255, 0.15)',
   overflow: 'hidden',
-},
+ },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
@@ -392,13 +414,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500,
     color: 'white',
   },
-  estadoBadge: {
+  // ESTILO NUEVO PARA EL BOTÓN
+  btnEstado: {
     display: 'inline-block',
-    padding: '4px 10px',
+    padding: '6px 12px',
     borderRadius: '20px',
     fontSize: '12px',
-    fontWeight: 500,
+    fontWeight: 600,
     color: 'white',
+    border: 'none',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   },
   acciones: {
     display: 'flex',
@@ -432,7 +457,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   boxShadow: '0 2px 10px rgba(0, 123, 255, 0.1)',
   textAlign: 'center',
   flex: 1,
-},
+ },
   resumenNumero: {
     display: 'block',
     fontSize: '28px',

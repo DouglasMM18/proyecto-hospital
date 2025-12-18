@@ -1,36 +1,37 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    MadreViewSet, 
+    MyTokenObtainPairView,
+    MadreViewSet,
     PartoViewSet, 
     RecienNacidoViewSet,
-    AltaMedicaViewSet,
-    LogActividadViewSet,
+    AltaViewSet,
+    LogAuditViewSet,
     UserViewSet,
-    # Reportes
-    reporte_pdf_rem,
-    reporte_auditoria_pdf,
+    reporte_excel_completo,
     alta_medica_pdf,
-    reporte_excel_completo
+    reporte_auditoria_pdf,
+    reporte_pdf_rem,
 )
 
-# --- CONFIGURACIÓN DEL ROUTER (CRUD AUTOMÁTICO) ---
 router = DefaultRouter()
 router.register(r'madres', MadreViewSet)
 router.register(r'partos', PartoViewSet)
 router.register(r'recien-nacidos', RecienNacidoViewSet)
-router.register(r'altas', AltaMedicaViewSet)
-router.register(r'logs', LogActividadViewSet)
-router.register(r'users', UserViewSet)
+router.register(r'altas', AltaViewSet)
+router.register(r'logs', LogAuditViewSet)
+router.register(r'users', UserViewSet) 
 
 urlpatterns = [
-    # 1. Rutas del CRUD (Router)
     path('', include(router.urls)),
-
-    # 2. Rutas Manuales (Reportes PDF/Excel)
+    path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('reportes/excel-partos/', reporte_excel_completo, name='reporte_excel'),
+    path('reportes/excel/', reporte_excel_completo, name='reporte_excel_alt'),
+    path('reportes/pdf-auditoria/', reporte_auditoria_pdf, name='reporte_auditoria'),
+    path('reportes/auditoria/', reporte_auditoria_pdf, name='reporte_auditoria_alt'),
+    path('reportes/logs/', reporte_auditoria_pdf, name='reporte_auditoria_logs'),
     path('reportes/rem/', reporte_pdf_rem, name='reporte_rem'),
-    path('reportes/logs/', reporte_auditoria_pdf, name='reporte_logs'),
-    path('reportes/excel/', reporte_excel_completo, name='reporte_excel'),
-    # Esta ruta espera un ID (ej: /api/reportes/alta/5/)
-    path('reportes/alta/<int:alta_id>/', alta_medica_pdf, name='reporte_alta'),
+    path('altas/<int:pk>/pdf/', alta_medica_pdf, name='alta_pdf'),
 ]

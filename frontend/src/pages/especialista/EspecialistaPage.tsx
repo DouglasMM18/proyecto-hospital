@@ -378,7 +378,7 @@ export default function EspecialistaPage({ initialTab = 'informes' }: { initialT
                   <tbody>
                     {logs.map(log => (
                       <tr key={log.id} style={styles.tr}>
-                        <td style={styles.td}>{new Date(log.fecha_hora).toLocaleString()}</td>
+                        <td style={styles.td}>{new Date(log.fecha).toLocaleString()}</td>
                         <td style={styles.td}>{log.username}</td>
                         <td style={styles.td}><span style={styles.rolBadge}>{log.rol}</span></td>
                         <td style={styles.td}>{log.tipo_accion}</td>

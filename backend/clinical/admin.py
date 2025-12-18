@@ -1,41 +1,52 @@
 from django.contrib import admin
-from .models import Madre, Parto, RecienNacido, LogActividad, AltaMedica, Perfil
+# Importamos los modelos con sus NOMBRES NUEVOS
+from .models import Madre, Parto, RecienNacido, Alta, LogAudit, Perfil
 
-@admin.register(Madre)
-class MadreAdmin(admin.ModelAdmin):
-    # Quitamos 'prevision' de los filtros porque no existe en el modelo
-    list_display = ('id', 'fecha_nacimiento', 'nacionalidad', 'comuna', 'created_at')
-    list_filter = ('comuna', 'nacionalidad') 
-    search_fields = ('rut_hash',) 
-
-@admin.register(Parto)
-class PartoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'fecha', 'hora', 'tipo_parto', 'edad_gestacional', 'profesional_acargo')
-    list_filter = ('tipo_parto', 'fecha')
-    search_fields = ('profesional_acargo',)
-
-@admin.register(RecienNacido)
-class RecienNacidoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'sexo', 'peso_gramos', 'talla_cm', 'apgar_1', 'apgar_5')
-    list_filter = ('sexo', 'vacuna_bcg')
-
-@admin.register(AltaMedica)
-class AltaMedicaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'estado', 'tipo', 'solicitado_por', 'fecha_solicitud')
-    list_filter = ('estado', 'tipo')
-
-@admin.register(LogActividad)
-class LogActividadAdmin(admin.ModelAdmin):
-    list_display = ('fecha_hora', 'username', 'rol', 'tipo_accion', 'modulo', 'ip_address')
-    list_filter = ('tipo_accion', 'modulo', 'rol')
-    search_fields = ('username', 'descripcion')
-    def has_add_permission(self, request):
-        return False
-    def has_change_permission(self, request, obj=None):
-        return False
-
+# 1. Perfil (Roles)
 @admin.register(Perfil)
 class PerfilAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'rol')
-    list_filter = ('rol',)
-    search_fields = ('usuario__username', 'usuario__email')
+    search_fields = ('usuario__username', 'rol')
+
+# 2. Madre
+@admin.register(Madre)
+class MadreAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre_completo', 'rut', 'created_at')
+    search_fields = ('nombre_completo', 'rut')
+    list_filter = ('nacionalidad', 'comuna')
+
+# 3. Parto
+@admin.register(Parto)
+class PartoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'madre', 'fecha', 'tipo_parto')
+    list_filter = ('tipo_parto',)
+
+# 4. Recién Nacido
+@admin.register(RecienNacido)
+class RecienNacidoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'parto', 'sexo', 'peso_gramos', 'apgar_1')
+    list_filter = ('sexo',)
+
+# 5. Alta (La de la campanita)
+@admin.register(Alta)
+class AltaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'parto', 'estado', 'tipo', 'fecha_solicitud')
+    list_filter = ('estado', 'tipo')
+    actions = ['marcar_autorizada']
+
+    def marcar_autorizada(self, request, queryset):
+        queryset.update(estado='AUTORIZADA')
+    marcar_autorizada.short_description = "Autorizar altas seleccionadas"
+
+# 6. Auditoría (Logs de seguridad)
+@admin.register(LogAudit)
+class LogAuditAdmin(admin.ModelAdmin):
+    list_display = ('fecha', 'usuario', 'accion', 'modelo', 'ip_address')
+    list_filter = ('accion', 'modelo')
+    readonly_fields = ('usuario', 'rol', 'accion', 'modelo', 'detalles', 'ip_address', 'fecha')
+    
+    # Quitamos permiso de agregar/borrar logs para que sea inmutable (Punto extra de seguridad)
+    def has_add_permission(self, request):
+        return False
+    def has_delete_permission(self, request, obj=None):
+        return False

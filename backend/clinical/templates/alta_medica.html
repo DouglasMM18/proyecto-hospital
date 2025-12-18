@@ -24,9 +24,9 @@
     </div>
 
     <div class="section">
-        <p><span class="label">Paciente:</span> {{ parto.madre.nombre_completo }}</p>
-        <p><span class="label">RUT:</span> {{ parto.madre.rut }}</p>
-        <p><span class="label">Fecha de Ingreso:</span> {{ parto.fecha }}</p>
+        <p><span class="label">Paciente:</span> {{ paciente_nombre }}</p>
+        <p><span class="label">RUT:</span> {{ rut_visible }}</p>
+        <p><span class="label">Fecha de Ingreso:</span> {{ fecha_ingreso }}</p>
     </div>
 
     {% if tipo_alta == 'VOLUNTARIA' %}

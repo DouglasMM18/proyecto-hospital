@@ -3,63 +3,148 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { size: letter portrait; margin: 2cm; }
-        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333; }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #0056b3; padding-bottom: 10px; }
-        .title { font-size: 18px; font-weight: bold; color: #0056b3; margin: 0; }
-        .subtitle { font-size: 14px; color: #666; margin-top: 5px; }
-        .stats-box { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background-color: #0056b3; color: white; padding: 8px; text-align: left; font-size: 11px; }
-        td { border-bottom: 1px solid #ddd; padding: 8px; font-size: 11px; vertical-align: top; }
-        .footer { position: fixed; bottom: 0; left: 0; right: 0; font-size: 10px; text-align: right; color: #999; border-top: 1px solid #ddd; padding-top: 5px; }
+        /* Definimos hoja HORIZONTAL para que quepan los datos */
+        @page {
+            size: letter landscape;
+            margin: 1cm;
+        }
+
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 10px;
+            color: #333;
+        }
+
+        /* Cabecera */
+        .header-table {
+            width: 100%;
+            border-bottom: 2px solid #0056b3;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #004494;
+            text-align: center;
+        }
+        .subtitle {
+            font-size: 12px;
+            text-align: center;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Resumen Estadístico (Cajas) */
+        .summary-box {
+            background-color: #f0f8ff;
+            border: 1px solid #bdd7ee;
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 12px;
+            border-radius: 5px;
+        }
+
+        /* Tabla Principal */
+        .main-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .main-table th {
+            background-color: #0056b3;
+            color: white;
+            font-weight: bold;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #004494;
+            font-size: 11px;
+        }
+        
+        .main-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            font-size: 10px;
+        }
+
+        .main-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Pie de página */
+        .footer {
+            position: fixed;
+            bottom: -20px;
+            left: 0px; 
+            right: 0px;
+            font-size: 9px;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="title">Hospital Clínico Herminda Martín</div>
-        <div class="subtitle">Reporte Oficial de Gestión URNI - REM</div>
+
+    <table class="header-table">
+        <tr>
+            <td width="20%"><strong>Hosp. Herminda Martín</strong><br>Unidad de Neonatología</td>
+            <td width="60%">
+                <div class="title">REPORTE OFICIAL DE GESTIÓN (REM)</div>
+                <div class="subtitle">Sistema de Trazabilidad Clínica y Auditoría</div>
+            </td>
+            <td width="20%" style="text-align: right;">
+                Fecha: {{ fecha_generacion|date:"d/m/Y H:i" }}<br>
+                Usuario: {{ generado_por }}
+            </td>
+        </tr>
+    </table>
+
+    <div class="summary-box">
+        <strong>RESUMEN EJECUTIVO:</strong> &nbsp;&nbsp;
+        Total Partos: <b>{{ total_partos }}</b> &nbsp;|&nbsp; 
+        Cesáreas: <b>{{ total_cesareas }}</b> &nbsp;|&nbsp; 
+        Partos Normales: <b>{{ total_normales }}</b>
     </div>
 
-    <div class="stats-box">
-        <strong>Resumen Ejecutivo:</strong> Total Partos: {{ total_partos }} | Cesáreas: {{ total_cesareas }} | Normales: {{ total_normales }}
-    </div>
-
-    <table>
+    <table class="main-table">
         <thead>
             <tr>
-                <th>Fecha</th>
-                <th>Tipo</th>
-                <th>Profesional</th>
-                <th>RUT Madre</th>
-                <th>RN Sexo</th>
-                <th>Peso</th>
+                <th width="15%">Fecha / Hora</th>
+                <th width="15%">Tipo Parto</th>
+                <th width="25%">Paciente (Madre)</th> <th width="15%">RUT Madre</th>
+                <th width="15%">Profesional</th>
+                <th width="8%">Sexo RN</th>
+                <th width="7%">Peso</th>
             </tr>
         </thead>
         <tbody>
-            {% for parto in partos %}
+            {% for p in lista_partos %}
             <tr>
-                <td>{{ parto.fecha }}</td>
-                <td>{{ parto.tipo_parto }}</td>
-                <td>{{ parto.profesional_acargo }}</td>
-                <td>{{ parto.madre.rut }}</td>
-                <td>
-                    {% for rn in parto.recien_nacidos.all %}
-                        {{ rn.sexo }}<br>
-                    {% endfor %}
-                </td>
-                <td>
-                    {% for rn in parto.recien_nacidos.all %}
-                        {{ rn.peso_gramos }} g<br>
-                    {% endfor %}
-                </td>
+                <td>{{ p.fecha|date:"d/m/Y H:i" }}</td>
+                <td>{{ p.tipo }}</td>
+                <td>{{ p.nombre_madre|truncatechars:35 }}</td> 
+                <td>{{ p.rut_madre }}</td>
+                <td>{{ p.profesional }}</td>
+                <td style="text-align: center;">{{ p.sexo }}</td>
+                <td style="text-align: center;">{{ p.peso }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" style="text-align: center;">No hay datos.</td></tr>
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px;">
+                    No hay registros de partos ingresados en el sistema.
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <div class="footer">Generado el: {{ fecha_generacion }}</div>
+    <div class="footer">
+        Documento confidencial generado automáticamente por el Sistema Clínico HHM. 
+        Su distribución no autorizada está prohibida.
+    </div>
+
 </body>
 </html>

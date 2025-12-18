@@ -8,7 +8,7 @@ export interface LogActividad {
   tipo_accion: string;
   modulo: string;
   descripcion: string;
-  fecha_hora: string;
+  fecha: string;
   ip_address: string | null;
 }
 
